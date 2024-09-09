@@ -18,6 +18,19 @@ func loadClientID() string {
 
 func checkEmail(t time.Time) {
 	fmt.Println(t, "Checking email...")
+	service := GetGmailService()
+	
+	log.Default().Println("Gmail service:", service)
+
+	user := "me"
+
+	res, err := service.Users.Messages.List(user).Do()
+	if err != nil {
+		log.Fatalf("Unable to retrieve labels: %v", err)
+	}
+
+	log.Default().Printf("Found %d messages", len(res.Messages))
+	
 }
 
 func ScheduleJob() {

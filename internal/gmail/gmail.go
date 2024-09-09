@@ -10,10 +10,14 @@ import (
 func loadClientID() string {
   clientID, exists := os.LookupEnv("GMAIL_CLIENT_ID")
 	if !exists {
-		log.Fatal("GMAIL_CLIENT_ID not found")
+		log.Fatal("GMAIL_CLIENT_ID environment variable not found")
 	}
 
 	return clientID
+}
+
+func checkEmail(t time.Time) {
+	fmt.Println(t, "Checking email...")
 }
 
 func ScheduleJob() {
@@ -29,7 +33,7 @@ func ScheduleJob() {
             case <-done:
                 return
             case t := <-ticker.C:
-                fmt.Println("Tick at", t)
+				checkEmail(t)
             }
         }
     }()

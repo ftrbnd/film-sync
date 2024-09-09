@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/ftrbnd/film-sync/internal/gmail"
+	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/joho/godotenv"
 )
 
@@ -14,4 +15,5 @@ func Bootstrap() {
   }
 
   gmail.ScheduleJob()
+  server.Listen() // always run last
 }

@@ -20,7 +20,7 @@ func getClient(config *oauth2.Config) *http.Client {
         // created automatically when the authorization flow completes for the first
         // time.
         tokFile := "token.json"
-        tok, err := tokenFromFile(tokFile)
+        tok, err := getTokenFromFile(tokFile)
         if err != nil {
                 tok = getTokenFromWeb(config)
                 saveToken(tokFile, tok)
@@ -47,7 +47,7 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 }
 
 // Retrieves a token from a local file.
-func tokenFromFile(file string) (*oauth2.Token, error) {
+func getTokenFromFile(file string) (*oauth2.Token, error) {
         f, err := os.Open(file)
         if err != nil {
                 return nil, err

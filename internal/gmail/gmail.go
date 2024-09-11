@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
+	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/util"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"google.golang.org/api/gmail/v1"
 )
 
@@ -23,14 +25,14 @@ func getEmailsBySender(sender string, service *gmail.Service) []*gmail.Message {
 }
 
 func filterEmailsByMetadata(messages []*gmail.Message, fieldName string, fieldValue string, service *gmail.Service) []*gmail.Message {
-    var emails []*gmail.Message
+	var emails []*gmail.Message
 
 	for _, msg := range messages {
 		message, err := service.Users.Messages.Get("me", msg.Id).Format("metadata").Do()
 		if err != nil {
 			log.Fatalf("Unable to retrieve message_%s: %v", msg.Id, err)
 		}
-		
+
 		for _, header := range message.Payload.Headers {
 			if header.Name == fieldName {
 				if header.Value == fieldValue {
@@ -43,7 +45,7 @@ func filterEmailsByMetadata(messages []*gmail.Message, fieldName string, fieldVa
 	return emails
 }
 
-func getDownloadLink(message *gmail.Message, service *gmail.Service) string {
+func GetDownloadLink(message *gmail.Message, service *gmail.Service) string {
 	msg, err := service.Users.Messages.Get("me", message.Id).Format("full").Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve message: %v", err)
@@ -61,37 +63,40 @@ func getDownloadLink(message *gmail.Message, service *gmail.Service) string {
 	return link
 }
 
-func checkEmail(t time.Time) {
-	fmt.Println(t, "Checking email...")
-
-	service := GetGmailService()
+func FetchEmails(s *gmail.Service) []*gmail.Message {
 	fromEmail := util.LoadEnvVar("FROM_EMAIL")
 	replyToEmail := util.LoadEnvVar("REPLY_TO_EMAIL")
-	
-	e := getEmailsBySender(fromEmail, service)
-	f := filterEmailsByMetadata(e, "Reply-To", replyToEmail, service)
 
-	for _, email := range(f) {
-		link := getDownloadLink(email, service)
-		log.Default().Println(link)
-	}
+	e := getEmailsBySender(fromEmail, s)
+	f := filterEmailsByMetadata(e, "Reply-To", replyToEmail, s)
+
+	return f
 }
 
-func ScheduleJob() {
-	clientID := util.LoadEnvVar("GMAIL_CLIENT_ID")
-	log.Default().Println("Client ID: ", clientID)
+func CheckEmail(c *mongo.Client) []string {
+	log.Default().Println("Checking email...")
+	service := GetGmailService()
 
-    ticker := time.NewTicker(5 * time.Second)
-    done := make(chan bool)
+	emails := FetchEmails(service)
+	saved := database.GetEmails(c)
 
-    go func() {
-        for {
-            select {
-            case <-done:
-                return
-            case t := <-ticker.C:
-				checkEmail(t)
-            }
-        }
-    }()
+	var newLinks []string
+
+	for _, email := range emails {
+		exists := database.EmailExists(saved, email)
+		if !exists {
+			link := GetDownloadLink(email, service)
+
+			newEmail := database.Email{ID: bson.NewObjectID(), EmailID: email.Id, DownloadLink: link}
+
+			database.AddEmail(c, newEmail)
+			log.Default().Printf("Added email #%s", email.Id)
+
+			newLinks = append(newLinks, link)
+		} else {
+			log.Default().Printf("Email #%s already exists in database", email.Id)
+		}
+	}
+
+	return newLinks
 }

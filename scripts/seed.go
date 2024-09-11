@@ -18,5 +18,7 @@ func main() {
 	client := database.Connect()
 	defer client.Disconnect(context.Background())
 
-	gmail.CheckEmail(client)
+	service := gmail.GetGmailService()
+
+	gmail.CheckEmail(client, service)
 }

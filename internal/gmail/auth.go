@@ -88,5 +88,6 @@ func GetGmailService() *gmail.Service {
 		log.Fatalf("Unable to retrieve Gmail client: %v", err)
 	}
 
+	log.Default().Println("Successfully retrieved Gmail service!")
 	return service
 }

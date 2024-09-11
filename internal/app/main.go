@@ -9,9 +9,10 @@ import (
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	gmailAPI "google.golang.org/api/gmail/v1"
 )
 
-func scheduleJob(c *mongo.Client) {
+func scheduleJob(c *mongo.Client, s *gmailAPI.Service) {
 	ticker := time.NewTicker(5 * time.Second)
 	done := make(chan bool)
 
@@ -21,7 +22,7 @@ func scheduleJob(c *mongo.Client) {
 			case <-done:
 				return
 			case <-ticker.C:
-				newLinks := gmail.CheckEmail(c)
+				newLinks := gmail.CheckEmail(c, s)
 				log.Default().Printf("Found %d new links", len(newLinks))
 
 				if len(newLinks) > 0 {
@@ -39,6 +40,7 @@ func Bootstrap() {
 	}
 
 	client := database.Connect()
-	scheduleJob(client)
+	service := gmail.GetGmailService()
+	scheduleJob(client, service)
 	server.Listen()
 }

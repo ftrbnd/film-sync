@@ -73,11 +73,10 @@ func FetchEmails(s *gmail.Service) []*gmail.Message {
 	return f
 }
 
-func CheckEmail(c *mongo.Client) []string {
+func CheckEmail(c *mongo.Client, s *gmail.Service) []string {
 	log.Default().Println("Checking email...")
-	service := GetGmailService()
 
-	emails := FetchEmails(service)
+	emails := FetchEmails(s)
 	saved := database.GetEmails(c)
 
 	var newLinks []string
@@ -85,7 +84,7 @@ func CheckEmail(c *mongo.Client) []string {
 	for _, email := range emails {
 		exists := database.EmailExists(saved, email)
 		if !exists {
-			link := GetDownloadLink(email, service)
+			link := GetDownloadLink(email, s)
 
 			newEmail := database.Email{ID: bson.NewObjectID(), EmailID: email.Id, DownloadLink: link}
 

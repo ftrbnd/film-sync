@@ -24,7 +24,7 @@ func Listen() {
 	router := newRouter()
 
 	log.Default().Printf("Server listening on http://localhost%s", addr)
-	
+
 	err := http.ListenAndServe(addr, router)
 	if err != nil {
 		log.Fatal(err)

@@ -23,6 +23,10 @@ func scheduleJob(c *mongo.Client) {
 			case <-ticker.C:
 				newLinks := gmail.CheckEmail(c)
 				log.Default().Printf("Found %d new links", len(newLinks))
+
+				if len(newLinks) > 0 {
+					// TODO: open links and download
+				}
 			}
 		}
 	}()

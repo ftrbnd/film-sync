@@ -8,11 +8,12 @@ import (
 	"github.com/ftrbnd/film-sync/internal/gmail"
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	gmailAPI "google.golang.org/api/gmail/v1"
 )
 
-func scheduleJob(c *mongo.Client, s *gmailAPI.Service) {
+func scheduleJob() {
+	client := database.Connect()
+	service := gmail.GetGmailService()
+
 	ticker := time.NewTicker(5 * time.Second)
 	done := make(chan bool)
 
@@ -22,7 +23,7 @@ func scheduleJob(c *mongo.Client, s *gmailAPI.Service) {
 			case <-done:
 				return
 			case <-ticker.C:
-				newLinks := gmail.CheckEmail(c, s)
+				newLinks := gmail.CheckEmail(client, service)
 				log.Default().Printf("Found %d new links", len(newLinks))
 
 				if len(newLinks) > 0 {
@@ -39,8 +40,6 @@ func Bootstrap() {
 		log.Fatal("Error loading .env file")
 	}
 
-	client := database.Connect()
-	service := gmail.GetGmailService()
-	scheduleJob(client, service)
+	go scheduleJob()
 	server.Listen()
 }

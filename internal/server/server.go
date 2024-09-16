@@ -1,35 +1,49 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/ftrbnd/film-sync/internal/gmail"
+	"golang.org/x/oauth2"
 )
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello film-sync!")
 }
 
-func authHandler(w http.ResponseWriter, r *http.Request) {
-	// EXAMPLE REQUEST URL:
-	// http://localhost:3001/auth?state=state-token&code=4/0AQlEd8wMXWEEeO2j2gg8QeCNbXziFDXFVCxPzcs5X3APmvv1c1jdRJ9t45yvyPRJC4zEqQ&scope=https://www.googleapis.com/auth/gmail.readonly
+func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token) {
+	code := r.URL.Query().Get("code")
+	config := gmail.Config()
 
-	fmt.Fprintln(w, "AUTH")
+	tok, err := config.Exchange(context.TODO(), code)
+	if err != nil {
+		log.Fatalf("Unable to retrieve token from web: %v", err)
+	}
+
+	gmail.SaveToken("token.json", tok)
+	acr <- tok
+
+	fmt.Fprintln(w, "Thank you! You can now close this tab.")
 }
 
-func newRouter() http.Handler {
+func newRouter(acr chan *oauth2.Token) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", indexHandler)
-	mux.HandleFunc("/auth", authHandler)
+	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
+		authHandler(w, r, acr)
+	})
 
 	return mux
 }
 
-func Listen() {
+func Listen(acr chan *oauth2.Token) {
 	port := 3001
 	addr := fmt.Sprintf(":%d", port)
-	router := newRouter()
+	router := newRouter(acr)
 
 	log.Default().Printf("Server listening on http://localhost%s", addr)
 

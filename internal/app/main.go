@@ -8,11 +8,12 @@ import (
 	"github.com/ftrbnd/film-sync/internal/gmail"
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/joho/godotenv"
+	"golang.org/x/oauth2"
 )
 
-func scheduleJob() {
+func scheduleJob(acr chan *oauth2.Token) {
 	client := database.Connect()
-	service := gmail.GetGmailService()
+	service := gmail.Service(acr)
 
 	ticker := time.NewTicker(5 * time.Second)
 	done := make(chan bool)
@@ -40,6 +41,8 @@ func Bootstrap() {
 		log.Fatal("Error loading .env file")
 	}
 
-	go scheduleJob()
-	server.Listen()
+	authCodeReceived := make(chan *oauth2.Token)
+
+	go scheduleJob(authCodeReceived)
+	server.Listen(authCodeReceived)
 }

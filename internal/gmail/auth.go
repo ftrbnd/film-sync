@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -30,35 +31,27 @@ type Credentials struct {
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config) *http.Client {
+func getClient(config *oauth2.Config, acr chan *oauth2.Token) *http.Client {
 	// The file token.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
 	// time.
-	tokFile := "token.json"
-	tok, err := getTokenFromFile(tokFile)
+	tok, err := getTokenFromFile("token.json")
 	if err != nil {
-		tok = getTokenFromWeb(config)
-		saveToken(tokFile, tok)
+		getTokenFromWeb(config)
+		tok = <-acr
 	}
+
 	return config.Client(context.Background(), tok)
 }
 
 // Request a token from the web, then returns the retrieved token.
-func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
+func getTokenFromWeb(config *oauth2.Config) {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
 
-	var authCode string
-	if _, err := fmt.Scan(&authCode); err != nil {
-		log.Fatalf("Unable to read authorization code: %v", err)
-	}
+	content := fmt.Sprintf("Go to the following link in your browser: \n%v", authURL)
+	discord.SendMessage(content)
 
-	tok, err := config.Exchange(context.TODO(), authCode)
-	if err != nil {
-		log.Fatalf("Unable to retrieve token from web: %v", err)
-	}
-	return tok
+	log.Default().Println("Waiting for user to authenticate...")
 }
 
 // Retrieves a token from a local file.
@@ -74,7 +67,7 @@ func getTokenFromFile(file string) (*oauth2.Token, error) {
 }
 
 // Saves a token to a file path.
-func saveToken(path string, token *oauth2.Token) {
+func SaveToken(path string, token *oauth2.Token) {
 	fmt.Printf("Saving credential file to: %s\n", path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -105,8 +98,7 @@ func CredentialsFromEnv() []byte {
 	return jsonData
 }
 
-func GetGmailService() *gmail.Service {
-	ctx := context.Background()
+func Config() *oauth2.Config {
 	b := CredentialsFromEnv()
 
 	// If modifying these scopes, delete your previously saved token.json.
@@ -114,7 +106,15 @@ func GetGmailService() *gmail.Service {
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
-	client := getClient(config)
+
+	return config
+}
+
+func Service(acr chan *oauth2.Token) *gmail.Service {
+	ctx := context.Background()
+
+	config := Config()
+	client := getClient(config, acr)
 
 	service, err := gmail.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {

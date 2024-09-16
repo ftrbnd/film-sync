@@ -7,6 +7,7 @@ import (
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/gmail"
 	"github.com/joho/godotenv"
+	"golang.org/x/oauth2"
 )
 
 func main() {
@@ -18,7 +19,10 @@ func main() {
 	client := database.Connect()
 	defer client.Disconnect(context.Background())
 
-	service := gmail.GetGmailService()
+	authCodeReceived := make(chan *oauth2.Token)
+	service := gmail.Service(authCodeReceived)
 
 	gmail.CheckEmail(client, service)
+
+	<-authCodeReceived
 }

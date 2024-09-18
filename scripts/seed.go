@@ -10,7 +10,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func main() {
+func Seed() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")

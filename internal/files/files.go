@@ -14,7 +14,7 @@ import (
 	"github.com/sunshineplan/imgconv"
 )
 
-func OpenZip(filename string, dst string) {
+func Unzip(filename string, dst string, format string) {
 	archive, err := zip.OpenReader(filename)
 	util.CheckError("Couldn't open .zip file", err)
 	defer archive.Close()
@@ -24,18 +24,20 @@ func OpenZip(filename string, dst string) {
 		prefix := filepath.Clean(dst) + string(os.PathSeparator)
 
 		if !strings.HasPrefix(filePath, prefix) {
-			log.Default().Println("Invalid file path: ", filePath)
 			return
 		}
 
 		if f.FileInfo().IsDir() {
-			log.Default().Printf("Creating %s directory...", filePath)
 			os.MkdirAll(filePath, os.ModePerm)
 			continue
 		}
 
 		err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
 		util.CheckError("Failed to create output directory", err)
+
+		if !strings.HasSuffix(filePath, format) {
+			continue
+		}
 
 		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 		util.CheckError(fmt.Sprintf("Failed to open %s", filePath), err)
@@ -61,6 +63,8 @@ func ConvertToPNG(format string, dir string) {
 		return visit(path, d, err, format)
 	})
 	util.CheckError("Failed to walk through directory", err)
+
+	log.Default().Println("Converted all files!")
 }
 
 func visit(path string, d fs.DirEntry, err error, format string) error {
@@ -68,12 +72,7 @@ func visit(path string, d fs.DirEntry, err error, format string) error {
 		return err
 	}
 
-	if d.IsDir() {
-		return nil
-	}
-
-	if !strings.HasSuffix(path, format) {
-		log.Default().Printf("%s is not a .%s file - skipping...", path, format)
+	if d.IsDir() || !strings.HasSuffix(path, format) {
 		return nil
 	}
 
@@ -87,6 +86,6 @@ func visit(path string, d fs.DirEntry, err error, format string) error {
 	err = imgconv.Write(dstFile, src, &imgconv.FormatOption{Format: imgconv.PNG})
 	util.CheckError("Failed to convert image", err)
 
-	log.Default().Printf("Converted %s!", pngPath)
+	log.Default().Printf("Saved %s", pngPath)
 	return nil
 }

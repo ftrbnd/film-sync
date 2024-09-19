@@ -13,3 +13,9 @@ func LoadEnvVar(key string) string {
 
 	return v
 }
+
+func CheckError(m string, e error) {
+	if e != nil {
+		log.Fatalf("%s: %v", m, e)
+	}
+}

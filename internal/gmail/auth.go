@@ -69,10 +69,10 @@ func getTokenFromFile(file string) (*oauth2.Token, error) {
 // Saves a token to a file path.
 func SaveToken(path string, token *oauth2.Token) {
 	fmt.Printf("Saving credential file to: %s\n", path)
+
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
-	}
+	util.CheckError("Unable to cache oauth token", err)
+
 	defer f.Close()
 	json.NewEncoder(f).Encode(token)
 }
@@ -91,9 +91,7 @@ func CredentialsFromEnv() []byte {
 	}
 
 	jsonData, err := json.Marshal(credentials)
-	if err != nil {
-		log.Fatalf("Unable to read credentials: %v", err)
-	}
+	util.CheckError("Unable to read credentials", err)
 
 	return jsonData
 }
@@ -103,9 +101,7 @@ func Config() *oauth2.Config {
 
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON(b, gmail.GmailReadonlyScope)
-	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
-	}
+	util.CheckError("Unable to parse client secret file to config", err)
 
 	return config
 }
@@ -117,9 +113,7 @@ func Service(acr chan *oauth2.Token) *gmail.Service {
 	client := getClient(config, acr)
 
 	service, err := gmail.NewService(ctx, option.WithHTTPClient(client))
-	if err != nil {
-		log.Fatalf("Unable to retrieve Gmail client: %v", err)
-	}
+	util.CheckError("Unable to retrieve Gmail client", err)
 
 	log.Default().Println("Successfully retrieved Gmail service!")
 	return service

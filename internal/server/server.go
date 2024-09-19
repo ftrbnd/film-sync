@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ftrbnd/film-sync/internal/gmail"
+	"github.com/ftrbnd/film-sync/internal/util"
 	"golang.org/x/oauth2"
 )
 
@@ -19,9 +20,7 @@ func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token)
 	config := gmail.Config()
 
 	tok, err := config.Exchange(context.TODO(), code)
-	if err != nil {
-		log.Fatalf("Unable to retrieve token from web: %v", err)
-	}
+	util.CheckError("Unable to retrieve token from web", err)
 
 	gmail.SaveToken("token.json", tok)
 	acr <- tok
@@ -48,8 +47,5 @@ func Listen(acr chan *oauth2.Token) {
 	log.Default().Printf("Server listening on http://localhost%s", addr)
 
 	err := http.ListenAndServe(addr, router)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	util.CheckError("Failed to start http server", err)
 }

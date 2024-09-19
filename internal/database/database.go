@@ -19,14 +19,11 @@ func Connect() *mongo.Client {
 
 	// Create a new client and connect to the server
 	client, err := mongo.Connect(opts)
-	if err != nil {
-		panic(err)
-	}
+	util.CheckError("Failed to connect to database", err)
 
 	// Send a ping to confirm a successful connection
-	if err := client.Database("admin").RunCommand(context.TODO(), bson.D{{Key: "ping", Value: 1}}).Err(); err != nil {
-		log.Fatalf("Ping was unsuccessful: %v", err)
-	}
+	err = client.Database("admin").RunCommand(context.TODO(), bson.D{{Key: "ping", Value: 1}}).Err()
+	util.CheckError("Ping was unsuccessful", err)
 
 	log.Default().Println("Successfully connected to MongoDB!")
 	return client

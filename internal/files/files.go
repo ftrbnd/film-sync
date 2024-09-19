@@ -2,12 +2,14 @@ package files
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/ftrbnd/film-sync/internal/util"
 	"github.com/sunshineplan/imgconv"
 )
 
@@ -16,9 +18,7 @@ func OpenZip(filename string) string {
 	var finalPath string
 
 	archive, err := zip.OpenReader(filename)
-	if err != nil {
-		log.Fatalf("Couldn't open .zip file: %v", err)
-	}
+	util.CheckError("Couldn't open .zip file", err)
 	defer archive.Close()
 
 	for _, f := range archive.File {
@@ -38,24 +38,16 @@ func OpenZip(filename string) string {
 		}
 
 		err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
-		if err != nil {
-			log.Fatalf("Failed to create output directory: %v", err)
-		}
+		util.CheckError("Failed to create output directory", err)
 
 		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
-			log.Fatalf("Failed to open %s: %v", filePath, err)
-		}
+		util.CheckError(fmt.Sprintf("Failed to open %s", filePath), err)
 
 		fileInZip, err := f.Open()
-		if err != nil {
-			log.Fatalf("Failed to open: %v", err)
-		}
+		util.CheckError("Failed to open", err)
 
 		_, err = io.Copy(dstFile, fileInZip)
-		if err != nil {
-			log.Fatalf("Failed to copy to destination: %v", err)
-		}
+		util.CheckError("Failed to copy to destination", err)
 
 		log.Default().Println("Saved ", filePath)
 
@@ -68,9 +60,7 @@ func OpenZip(filename string) string {
 
 func ConvertToPNG(directory string, format string) {
 	items, err := os.ReadDir(directory)
-	if err != nil {
-		log.Fatalf("Failed to read output directory: %v", err)
-	}
+	util.CheckError("Failed to read output directory", err)
 
 	for _, item := range items {
 		if !strings.HasSuffix(item.Name(), format) {
@@ -79,23 +69,14 @@ func ConvertToPNG(directory string, format string) {
 		}
 
 		filePath := filepath.Join(directory, item.Name())
-		filePathPNG := strings.Replace(filePath, "tif", "png", 1)
-		log.Default().Println("PATH: ", filePath)
 
 		src, err := imgconv.Open(filePath)
-		if err != nil {
-			log.Fatalf("Failed to open image: %v", err)
-		}
+		util.CheckError("Failed to open image", err)
 
-		dstFile, err := os.Create(filePathPNG)
-		if err != nil {
-			log.Fatalf("Failed to create destination file: %v", err)
-		}
+		dstFile, err := os.Create(strings.Replace(filePath, "tif", "png", 1))
+		util.CheckError("Failed to create .png file", err)
 
 		err = imgconv.Write(dstFile, src, &imgconv.FormatOption{Format: imgconv.PNG})
-		if err != nil {
-			log.Fatalf("Failed to convert image: %v", err)
-		}
+		util.CheckError("Failed to convert image", err)
 	}
-
 }

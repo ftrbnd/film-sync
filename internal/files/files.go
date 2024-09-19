@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,10 +14,7 @@ import (
 	"github.com/sunshineplan/imgconv"
 )
 
-func OpenZip(filename string) string {
-	dst := "output"
-	var finalPath string
-
+func OpenZip(filename string, dst string) {
 	archive, err := zip.OpenReader(filename)
 	util.CheckError("Couldn't open .zip file", err)
 	defer archive.Close()
@@ -27,13 +25,12 @@ func OpenZip(filename string) string {
 
 		if !strings.HasPrefix(filePath, prefix) {
 			log.Default().Println("Invalid file path: ", filePath)
-			return ""
+			return
 		}
 
 		if f.FileInfo().IsDir() {
 			log.Default().Printf("Creating %s directory...", filePath)
 			os.MkdirAll(filePath, os.ModePerm)
-			finalPath = filePath
 			continue
 		}
 
@@ -54,29 +51,42 @@ func OpenZip(filename string) string {
 		dstFile.Close()
 		fileInZip.Close()
 	}
-
-	return finalPath
 }
 
-func ConvertToPNG(directory string, format string) {
-	items, err := os.ReadDir(directory)
-	util.CheckError("Failed to read output directory", err)
+func ConvertToPNG(format string, dir string) {
+	_, err := os.ReadDir(dir)
+	util.CheckError("Failed to read directory", err)
 
-	for _, item := range items {
-		if !strings.HasSuffix(item.Name(), format) {
-			log.Default().Printf("%s is not a .%s file", item.Name(), format)
-			continue
-		}
+	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		return visit(path, d, err, format)
+	})
+	util.CheckError("Failed to walk through directory", err)
+}
 
-		filePath := filepath.Join(directory, item.Name())
-
-		src, err := imgconv.Open(filePath)
-		util.CheckError("Failed to open image", err)
-
-		dstFile, err := os.Create(strings.Replace(filePath, "tif", "png", 1))
-		util.CheckError("Failed to create .png file", err)
-
-		err = imgconv.Write(dstFile, src, &imgconv.FormatOption{Format: imgconv.PNG})
-		util.CheckError("Failed to convert image", err)
+func visit(path string, d fs.DirEntry, err error, format string) error {
+	if err != nil {
+		return err
 	}
+
+	if d.IsDir() {
+		return nil
+	}
+
+	if !strings.HasSuffix(path, format) {
+		log.Default().Printf("%s is not a .%s file - skipping...", path, format)
+		return nil
+	}
+
+	src, err := imgconv.Open(path)
+	util.CheckError("Failed to open image", err)
+
+	pngPath := strings.Replace(path, "tif", "png", 1)
+	dstFile, err := os.Create(pngPath)
+	util.CheckError("Failed to create .png file", err)
+
+	err = imgconv.Write(dstFile, src, &imgconv.FormatOption{Format: imgconv.PNG})
+	util.CheckError("Failed to convert image", err)
+
+	log.Default().Printf("Converted %s!", pngPath)
+	return nil
 }

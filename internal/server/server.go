@@ -40,12 +40,11 @@ func newRouter(acr chan *oauth2.Token) http.Handler {
 }
 
 func Listen(acr chan *oauth2.Token) {
-	port := 3001
-	addr := fmt.Sprintf(":%d", port)
+	port := util.LoadEnvVar("PORT")
 	router := newRouter(acr)
 
-	log.Default().Printf("Server listening on http://localhost%s", addr)
+	log.Default().Printf("Server listening on port %s", port)
 
-	err := http.ListenAndServe(addr, router)
+	err := http.ListenAndServe(":"+port, router)
 	util.CheckError("Failed to start http server", err)
 }

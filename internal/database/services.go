@@ -32,7 +32,7 @@ func AddEmail(c *mongo.Client, e Email) *mongo.InsertOneResult {
 	res, err := collection.InsertOne(context.TODO(), e)
 	util.CheckError("Unable to insert document", err)
 
-	log.Default().Printf("Inserted email #%s", e.EmailID)
+	log.Default().Printf("Inserted email %s to database", e.EmailID)
 	return res
 }
 

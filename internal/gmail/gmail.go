@@ -81,7 +81,6 @@ func CheckEmail(c *mongo.Client, s *gmail.Service) []string {
 			newEmail := database.Email{ID: bson.NewObjectID(), EmailID: email.Id, DownloadLink: link}
 
 			database.AddEmail(c, newEmail)
-			log.Default().Printf("Added email #%s", email.Id)
 
 			newLinks = append(newLinks, link)
 		} else {

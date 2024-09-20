@@ -48,7 +48,7 @@ func Unzip(filename string, dst string, format string) {
 		_, err = io.Copy(dstFile, fileInZip)
 		util.CheckError("Failed to copy to destination", err)
 
-		log.Default().Println("Saved ", filePath)
+		log.Default().Println("Saved", filePath)
 
 		dstFile.Close()
 		fileInZip.Close()
@@ -86,6 +86,6 @@ func visit(path string, d fs.DirEntry, err error, format string) error {
 	err = imgconv.Write(dstFile, src, &imgconv.FormatOption{Format: imgconv.PNG})
 	util.CheckError("Failed to convert image", err)
 
-	log.Default().Printf("Saved %s", pngPath)
+	log.Default().Printf("Converted %s", pngPath)
 	return nil
 }

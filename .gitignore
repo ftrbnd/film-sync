@@ -22,6 +22,7 @@ credentials.json
 token.json
 *.zip
 output
+scripts/test
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

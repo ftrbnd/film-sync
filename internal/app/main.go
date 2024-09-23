@@ -8,7 +8,6 @@ import (
 	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/gmail"
 	"github.com/ftrbnd/film-sync/internal/server"
-	"github.com/ftrbnd/film-sync/internal/util"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 )
@@ -51,7 +50,9 @@ func scheduleJob(acr chan *oauth2.Token) {
 
 func Bootstrap() {
 	err := godotenv.Load()
-	util.CheckError("Error loading .env file", err)
+	if err != nil {
+		log.Default().Println("Failed to load .env file")
+	}
 
 	authCodeReceived := make(chan *oauth2.Token)
 

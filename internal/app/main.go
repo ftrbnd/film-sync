@@ -28,7 +28,7 @@ func scheduleJob(acr chan *oauth2.Token) {
 	client := database.Connect()
 	service := gmail.Service(acr)
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(24 * time.Hour)
 	done := make(chan bool)
 
 	go func() {

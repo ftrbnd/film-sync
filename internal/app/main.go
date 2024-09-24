@@ -14,13 +14,13 @@ import (
 
 func startJob(links []string) {
 	dst := "output"
-	initialFormat := "tif"
+	format := "tif"
 
 	for _, link := range links {
-		zipFile := files.DownloadFrom(link)
-		files.Unzip(zipFile, dst, initialFormat)
-		files.ConvertToPNG(initialFormat, dst)
-		files.Upload(dst)
+		z := files.DownloadFrom(link)
+		files.Unzip(z, dst, format)
+		c := files.ConvertToPNG(format, dst)
+		files.Upload(dst, z, c)
 	}
 }
 
@@ -28,7 +28,7 @@ func scheduleJob(acr chan *oauth2.Token) {
 	client := database.Connect()
 	service := gmail.Service(acr)
 
-	ticker := time.NewTicker(24 * time.Hour)
+	ticker := time.NewTicker(5 * time.Second)
 	done := make(chan bool)
 
 	go func() {

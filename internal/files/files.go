@@ -55,19 +55,22 @@ func Unzip(filename string, dst string, format string) {
 	}
 }
 
-func ConvertToPNG(format string, dir string) {
+func ConvertToPNG(format string, dir string) int {
 	_, err := os.ReadDir(dir)
 	util.CheckError("Failed to read directory", err)
 
+	count := 0
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		return visit(path, d, err, format)
+		return visit(path, d, err, format, &count)
 	})
 	util.CheckError("Failed to walk through directory", err)
 
 	log.Default().Println("Converted all files!")
+
+	return count
 }
 
-func visit(path string, d fs.DirEntry, err error, format string) error {
+func visit(path string, d fs.DirEntry, err error, format string, c *int) error {
 	if err != nil {
 		return err
 	}
@@ -87,5 +90,6 @@ func visit(path string, d fs.DirEntry, err error, format string) error {
 	util.CheckError("Failed to convert image", err)
 
 	log.Default().Printf("Converted %s", pngPath)
+	*c++
 	return nil
 }

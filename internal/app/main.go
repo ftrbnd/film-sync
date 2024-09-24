@@ -6,7 +6,7 @@ import (
 
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/files"
-	"github.com/ftrbnd/film-sync/internal/gmail"
+	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
@@ -26,7 +26,7 @@ func startJob(links []string) {
 
 func scheduleJob(acr chan *oauth2.Token) {
 	client := database.Connect()
-	service := gmail.Service(acr)
+	service := google.Service(acr)
 
 	ticker := time.NewTicker(24 * time.Hour)
 	done := make(chan bool)
@@ -37,7 +37,7 @@ func scheduleJob(acr chan *oauth2.Token) {
 			case <-done:
 				return
 			case <-ticker.C:
-				newLinks := gmail.CheckEmail(client, service)
+				newLinks := google.CheckEmail(client, service)
 				log.Default().Printf("Found %d new links", len(newLinks))
 
 				if len(newLinks) > 0 {

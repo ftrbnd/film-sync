@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ftrbnd/film-sync/internal/gmail"
+	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"golang.org/x/oauth2"
 )
@@ -17,12 +17,12 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token) {
 	code := r.URL.Query().Get("code")
-	config := gmail.Config()
+	config := google.Config()
 
 	tok, err := config.Exchange(context.TODO(), code)
 	util.CheckError("Unable to retrieve token from web", err)
 
-	gmail.SaveToken("token.json", tok)
+	google.SaveToken("token.json", tok)
 	acr <- tok
 
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")

@@ -18,7 +18,7 @@ func main() {
 	defer client.Disconnect(context.Background())
 
 	authCodeReceived := make(chan *oauth2.Token)
-	service := google.Service(authCodeReceived)
+	service := google.GmailService(authCodeReceived)
 
 	google.CheckEmail(client, service)
 

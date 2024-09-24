@@ -12,6 +12,7 @@ import (
 	"github.com/ftrbnd/film-sync/internal/util"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
 )
@@ -106,7 +107,7 @@ func Config() *oauth2.Config {
 	return config
 }
 
-func Service(acr chan *oauth2.Token) *gmail.Service {
+func GmailService(acr chan *oauth2.Token) *gmail.Service {
 	ctx := context.Background()
 
 	config := Config()
@@ -116,5 +117,18 @@ func Service(acr chan *oauth2.Token) *gmail.Service {
 	util.CheckError("Unable to retrieve Gmail client", err)
 
 	log.Default().Println("Successfully retrieved Gmail service!")
+	return service
+}
+
+func DriveService(acr chan *oauth2.Token) *drive.Service {
+	ctx := context.Background()
+
+	config := Config()
+	client := getClient(config, acr)
+
+	service, err := drive.NewService(ctx, option.WithHTTPClient(client))
+	util.CheckError("Unable to retrieve Google Drive client", err)
+
+	log.Default().Println("Successfully retrieved Google Drive service!")
 	return service
 }

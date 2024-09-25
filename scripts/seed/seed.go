@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/ftrbnd/film-sync/internal/database"
-	"github.com/ftrbnd/film-sync/internal/gmail"
+	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
@@ -18,9 +18,9 @@ func main() {
 	defer client.Disconnect(context.Background())
 
 	authCodeReceived := make(chan *oauth2.Token)
-	service := gmail.Service(authCodeReceived)
+	service := google.GmailService(authCodeReceived)
 
-	gmail.CheckEmail(client, service)
+	google.CheckEmail(client, service)
 
 	<-authCodeReceived
 }

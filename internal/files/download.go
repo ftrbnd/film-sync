@@ -28,7 +28,7 @@ func DownloadFrom(link string) string {
 	log.Default().Println("Clicked on 'Accept All'")
 
 	page.MustElementR("button", "I agree").MustClick()
-	log.Default().Println("Clicked on 'I agree")
+	log.Default().Println("Clicked on 'I agree'")
 
 	page.MustWaitDOMStable()
 
@@ -54,7 +54,7 @@ func DownloadFrom(link string) string {
 	newName := filepath.Join(wd, res.SuggestedFilename)
 	err = os.Rename(file, newName)
 	util.CheckError("Failed to rename file", err)
-	log.Default().Println("Renamed file to ", newName)
+	log.Default().Println("Renamed file to", newName)
 
 	return newName
 }

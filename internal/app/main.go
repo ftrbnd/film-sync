@@ -6,13 +6,14 @@ import (
 
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/files"
-	"github.com/ftrbnd/film-sync/internal/gmail"
+	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
+	"google.golang.org/api/drive/v3"
 )
 
-func startJob(links []string) {
+func startJob(links []string, drive *drive.Service) {
 	dst := "output"
 	format := "tif"
 
@@ -20,15 +21,17 @@ func startJob(links []string) {
 		z := files.DownloadFrom(link)
 		files.Unzip(z, dst, format)
 		c := files.ConvertToPNG(format, dst)
-		files.Upload(dst, z, c)
+		files.Upload(dst, z, c, drive)
 	}
 }
 
 func scheduleJob(acr chan *oauth2.Token) {
 	client := database.Connect()
-	service := gmail.Service(acr)
+	gmail := google.GmailService(acr)
+	drive := google.DriveService(acr)
 
-	ticker := time.NewTicker(24 * time.Hour)
+	// TODO: change back to 24 hours
+	ticker := time.NewTicker(5 * time.Second)
 	done := make(chan bool)
 
 	go func() {
@@ -37,11 +40,11 @@ func scheduleJob(acr chan *oauth2.Token) {
 			case <-done:
 				return
 			case <-ticker.C:
-				newLinks := gmail.CheckEmail(client, service)
+				newLinks := google.CheckEmail(client, gmail)
 				log.Default().Printf("Found %d new links", len(newLinks))
 
 				if len(newLinks) > 0 {
-					startJob(newLinks)
+					startJob(newLinks, drive)
 				}
 			}
 		}

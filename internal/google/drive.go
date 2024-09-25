@@ -9,7 +9,7 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-func CreateFolder(service *drive.Service, name string) (string, string) {
+func CreateFolder(service *drive.Service, name string) string {
 	parent := util.LoadEnvVar("DRIVE_FOLDER_ID")
 
 	res, err := service.Files.Create(&drive.File{
@@ -19,7 +19,7 @@ func CreateFolder(service *drive.Service, name string) (string, string) {
 	}).Do()
 	util.CheckError("Failed to create folder", err)
 
-	return res.Id, res.WebViewLink
+	return res.Id
 }
 
 func Upload(bytes *bytes.Reader, filePath string, folderID string, service *drive.Service) error {
@@ -34,7 +34,7 @@ func Upload(bytes *bytes.Reader, filePath string, folderID string, service *driv
 	if err != nil {
 		return err
 	} else {
-		log.Default().Printf("Uploaded %s to Google Drive!\n", name)
+		log.Default().Printf("[Google Drive] Uploaded %s!\n", name)
 		return nil
 	}
 }

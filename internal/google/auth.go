@@ -101,7 +101,7 @@ func Config() *oauth2.Config {
 	b := CredentialsFromEnv()
 
 	// If modifying these scopes, delete your previously saved token.json.
-	config, err := google.ConfigFromJSON(b, gmail.GmailReadonlyScope)
+	config, err := google.ConfigFromJSON(b, gmail.GmailReadonlyScope, drive.DriveFileScope)
 	util.CheckError("Unable to parse client secret file to config", err)
 
 	return config

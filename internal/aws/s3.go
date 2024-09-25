@@ -37,7 +37,7 @@ func Upload(bytes *bytes.Reader, fileType string, size int64, dst string, path s
 	if err != nil {
 		return err
 	} else {
-		log.Default().Printf("Uploaded %s to S3!\n", path)
+		log.Default().Printf("[AWS S3] Uploaded %s!\n", path)
 		return nil
 	}
 }

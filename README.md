@@ -108,6 +108,7 @@ Create a `.env` file at the root and fill out the values:
 ```env
   FROM_EMAIL="noreply@wetransfer.com"
   REPLY_TO_EMAIL="giosalas25@gmail.com"
+  DRIVE_FOLDER_ID="" # parent folder for all folders created by film-sync
 
   MONGODB_URI=""
 
@@ -140,14 +141,15 @@ This is currently meant to server only one user, so those interested should clon
 
 ### Authentication
 
-When the app first starts, a Discord message will be sent to the user asking them to sign in with their Google account. Following the sent link and signing in is all that's need to set up credentials
+When the app first starts, a Discord message will be sent to the user asking them to sign in with their Google account. Following the link and signing in is all that's need to set up credentials
 
-[![Auth Screenshot][auth-screenshot]](https://i.imgur.com/D845zqx.png)
+[![Auth Screenshot][auth-screenshot]][auth-screenshot]
 
 ### Upload Complete
 
 Once all photos from a zip file have been successfully uploaded, the Discord bot will sent a confirmation message:
-[![Success Screenshot][success-screenshot]](https://i.imgur.com/xYKpKAX.png)
+
+[![Success Screenshot][success-screenshot]][success-screenshot]
 
 <!-- CONTRIBUTING -->
 
@@ -192,5 +194,5 @@ Project Link: [https://github.com/ftrbnd/film-sync](https://github.com/ftrbnd/fi
 [Fly]: https://img.shields.io/badge/fly.io-24175B?style=for-the-badge&logo=flydotio&logoColor=white
 [Fly-url]: https://fly.io
 [portfolio-url]: https://giosalad.dev
-[auth-screenshot]: https://i.imgur.com/D845zqx.png
-[success-screenshot]: https://i.imgur.com/xYKpKAX.png
+[auth-screenshot]: https://i.imgur.com/3OiA1Mx.png
+[success-screenshot]: https://i.imgur.com/36YvcAW.png

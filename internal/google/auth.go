@@ -49,8 +49,7 @@ func getClient(config *oauth2.Config, acr chan *oauth2.Token) *http.Client {
 func getTokenFromWeb(config *oauth2.Config) {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 
-	content := fmt.Sprintf("Go to the following link in your browser: \n%v", authURL)
-	discord.SendMessage(content)
+	discord.SendAuthMessage(authURL)
 
 	log.Default().Println("Waiting for user to authenticate...")
 }

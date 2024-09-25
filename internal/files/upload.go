@@ -58,10 +58,10 @@ func Upload(from string, zip string, count int, drive *drive.Service) {
 	util.CheckError("Failed to walk through directory", err)
 
 	s3Url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", util.LoadEnvVar("AWS_REGION"), util.LoadEnvVar("AWS_BUCKET_NAME"), util.LoadEnvVar("AWS_REGION"), folder)
-	driveLink := fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", folderID)
+	driveUrl := fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", folderID)
 
-	message := fmt.Sprintf("Finished uploading **%s** (%d new photos) to [AWS S3](%s) and [Google Drive](%s)", folder, count, s3Url, driveLink)
-	discord.SendMessage(message)
+	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folder, count)
+	discord.SendSuccessMessage(s3Url, driveUrl, message)
 
 	err = os.RemoveAll(from)
 	util.CheckError("Failed to remove directory", err)

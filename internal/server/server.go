@@ -6,8 +6,10 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/oauth2"
 )
 
@@ -15,7 +17,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello film-sync!")
 }
 
-func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token) {
+func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token, client *mongo.Client) {
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 	if code == "" || state == "" {
@@ -30,26 +32,26 @@ func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token)
 		return
 	}
 
-	google.SaveToken("token.json", tok)
+	database.SaveToken(client, tok)
 	acr <- tok
 
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")
 }
 
-func newRouter(acr chan *oauth2.Token) http.Handler {
+func newRouter(acr chan *oauth2.Token, client *mongo.Client) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
-		authHandler(w, r, acr)
+		authHandler(w, r, acr, client)
 	})
 
 	return mux
 }
 
-func Listen(acr chan *oauth2.Token) {
+func Listen(acr chan *oauth2.Token, client *mongo.Client) {
 	port := util.LoadEnvVar("PORT")
-	router := newRouter(acr)
+	router := newRouter(acr, client)
 
 	log.Default().Printf("Server listening on port %s", port)
 

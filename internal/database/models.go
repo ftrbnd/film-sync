@@ -15,3 +15,8 @@ func EmailCollection(c *mongo.Client) *mongo.Collection {
 	collection := c.Database("film-sync").Collection("emails")
 	return collection
 }
+
+func OAuthTokenCollection(c *mongo.Client) *mongo.Collection {
+	collection := c.Database("film-sync").Collection("oauth_tokens")
+	return collection
+}

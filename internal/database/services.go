@@ -8,6 +8,7 @@ import (
 	"github.com/ftrbnd/film-sync/internal/util"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/gmail/v1"
 )
 
@@ -42,4 +43,28 @@ func EmailExists(savedEmails []Email, fetchedEmail *gmail.Message) bool {
 	})
 
 	return exists
+}
+
+func SaveToken(c *mongo.Client, tok *oauth2.Token) *mongo.InsertOneResult {
+	collection := OAuthTokenCollection(c)
+
+	_, err := collection.DeleteMany(context.TODO(), bson.D{})
+	util.CheckError("Unable to reset OAuthToken collection", err)
+
+	res, err := collection.InsertOne(context.TODO(), tok)
+	util.CheckError("Unable to save token", err)
+
+	log.Default().Println("Saved token to database")
+	return res
+}
+
+func GetToken(c *mongo.Client) (*oauth2.Token, error) {
+	collection := OAuthTokenCollection(c)
+
+	res := collection.FindOne(context.TODO(), bson.D{})
+
+	tok := &oauth2.Token{}
+	err := res.Decode(tok)
+
+	return tok, err
 }

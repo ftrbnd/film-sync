@@ -9,6 +9,7 @@ import (
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/drive/v3"
 )
@@ -25,10 +26,9 @@ func startJob(links []string, drive *drive.Service) {
 	}
 }
 
-func scheduleJob(acr chan *oauth2.Token) {
-	client := database.Connect()
-	gmail := google.GmailService(acr)
-	drive := google.DriveService(acr)
+func scheduleJob(acr chan *oauth2.Token, client *mongo.Client) {
+	gmail := google.GmailService(acr, client)
+	drive := google.DriveService(acr, client)
 
 	// TODO: change back to 24 hours
 	ticker := time.NewTicker(5 * time.Second)
@@ -57,8 +57,9 @@ func Bootstrap() {
 		log.Default().Println("Failed to load .env file")
 	}
 
+	client := database.Connect()
 	authCodeReceived := make(chan *oauth2.Token)
 
-	go scheduleJob(authCodeReceived)
-	server.Listen(authCodeReceived)
+	go scheduleJob(authCodeReceived, client)
+	server.Listen(authCodeReceived, client)
 }

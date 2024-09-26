@@ -53,7 +53,7 @@ func Listen(acr chan *oauth2.Token, client *mongo.Client) {
 	port := util.LoadEnvVar("PORT")
 	router := newRouter(acr, client)
 
-	log.Default().Printf("Server listening on port %s", port)
+	log.Default().Printf("[HTTP] Server listening on port %s", port)
 
 	err := http.ListenAndServe(":"+port, router)
 	util.CheckError("Failed to start http server", err)

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/util"
@@ -32,20 +33,20 @@ type Credentials struct {
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config, acr chan *oauth2.Token, client *mongo.Client) *http.Client {
+func getClient(config *oauth2.Config, acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Session) *http.Client {
 	tok, err := getTokenFromDatabase(client)
 	if err != nil {
-		getTokenFromWeb(config)
+		getTokenFromWeb(config, bot)
 		tok = <-acr
 	}
 
 	return config.Client(context.Background(), tok)
 }
 
-func getTokenFromWeb(config *oauth2.Config) {
+func getTokenFromWeb(config *oauth2.Config, bot *discordgo.Session) {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 
-	discord.SendAuthMessage(authURL)
+	discord.SendAuthMessage(authURL, bot)
 
 	log.Default().Println("Waiting for user to authenticate...")
 }
@@ -84,28 +85,28 @@ func Config() *oauth2.Config {
 	return config
 }
 
-func GmailService(acr chan *oauth2.Token, db *mongo.Client) *gmail.Service {
+func GmailService(acr chan *oauth2.Token, db *mongo.Client, bot *discordgo.Session) *gmail.Service {
 	ctx := context.Background()
 
 	config := Config()
-	client := getClient(config, acr, db)
+	client := getClient(config, acr, db, bot)
 
 	service, err := gmail.NewService(ctx, option.WithHTTPClient(client))
 	util.CheckError("Unable to retrieve Gmail client", err)
 
-	log.Default().Println("Successfully retrieved Gmail service!")
+	log.Default().Println("[Gmail] Successfully retrieved service")
 	return service
 }
 
-func DriveService(acr chan *oauth2.Token, db *mongo.Client) *drive.Service {
+func DriveService(acr chan *oauth2.Token, db *mongo.Client, bot *discordgo.Session) *drive.Service {
 	ctx := context.Background()
 
 	config := Config()
-	client := getClient(config, acr, db)
+	client := getClient(config, acr, db, bot)
 
 	service, err := drive.NewService(ctx, option.WithHTTPClient(client))
 	util.CheckError("Unable to retrieve Google Drive client", err)
 
-	log.Default().Println("Successfully retrieved Google Drive service!")
+	log.Default().Println("[Google Drive] Successfully retrieved service")
 	return service
 }

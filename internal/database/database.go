@@ -25,6 +25,6 @@ func Connect() *mongo.Client {
 	err = client.Database("film-sync").RunCommand(context.TODO(), bson.D{{Key: "ping", Value: 1}}).Err()
 	util.CheckError("Failed to ping database", err)
 
-	log.Default().Println("Successfully connected to MongoDB!")
+	log.Default().Println("[MongoDB] Successfully connected")
 	return client
 }

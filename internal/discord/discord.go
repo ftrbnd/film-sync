@@ -1,35 +1,42 @@
 package discord
 
 import (
+	"log"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
-func getSession() *discordgo.Session {
+func Session() *discordgo.Session {
 	token := util.LoadEnvVar("DISCORD_TOKEN")
 
 	s, err := discordgo.New("Bot " + token)
 	util.CheckError("Unable to start Discord session", err)
 
+	err = s.Open()
+	util.CheckError("Failed to open Discord session", err)
+
+	s.AddHandler(func(s *discordgo.Session, m *discordgo.InteractionCreate) {
+		log.Default().Println("EVENT:", m.Type)
+	})
+
+	log.Default().Printf("[Discord] %s is ready", s.State.User)
 	return s
 }
 
-func createDMChannel() (*discordgo.Session, *discordgo.Channel) {
-	s := getSession()
-
+func createDMChannel(s *discordgo.Session) *discordgo.Channel {
 	userID := util.LoadEnvVar("DISCORD_USER_ID")
 
 	c, err := s.UserChannelCreate(userID)
 	util.CheckError("Failed to create DM channel", err)
 
-	return s, c
+	return c
 }
 
-func SendAuthMessage(authURL string) {
-	session, channel := createDMChannel()
-	defer session.Close()
+func SendAuthMessage(authURL string, s *discordgo.Session) {
+	channel := createDMChannel(s)
 
-	_, err := session.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+	_, err := s.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
 			{
 				Title:       "Authentication required!",
@@ -53,11 +60,10 @@ func SendAuthMessage(authURL string) {
 	util.CheckError("Failed to send auth message", err)
 }
 
-func SendSuccessMessage(s3Url string, driveUrl string, message string) {
-	session, channel := createDMChannel()
-	defer session.Close()
+func SendSuccessMessage(s3Url string, driveUrl string, message string, s *discordgo.Session) {
+	channel := createDMChannel(s)
 
-	_, err := session.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+	_, err := s.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
 			{
 				Title:       "Upload successful!",

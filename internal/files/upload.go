@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bwmarrin/discordgo"
 	myaws "github.com/ftrbnd/film-sync/internal/aws"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/google"
@@ -16,7 +17,7 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-func Upload(from string, zip string, count int, drive *drive.Service) {
+func Upload(from string, zip string, count int, drive *drive.Service, bot *discordgo.Session) {
 	folder := strings.ReplaceAll(filepath.Base(zip), ".zip", "")
 
 	_, err := os.ReadDir(from)
@@ -61,7 +62,7 @@ func Upload(from string, zip string, count int, drive *drive.Service) {
 	driveUrl := fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", folderID)
 
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folder, count)
-	discord.SendSuccessMessage(s3Url, driveUrl, message)
+	discord.SendSuccessMessage(s3Url, driveUrl, message, bot)
 
 	err = os.RemoveAll(from)
 	util.CheckError("Failed to remove directory", err)

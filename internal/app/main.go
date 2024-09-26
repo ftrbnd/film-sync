@@ -4,7 +4,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/ftrbnd/film-sync/internal/database"
+	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/server"
@@ -14,7 +16,7 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-func startJob(links []string, drive *drive.Service) {
+func startJob(links []string, drive *drive.Service, bot *discordgo.Session) {
 	dst := "output"
 	format := "tif"
 
@@ -22,13 +24,13 @@ func startJob(links []string, drive *drive.Service) {
 		z := files.DownloadFrom(link)
 		files.Unzip(z, dst, format)
 		c := files.ConvertToPNG(format, dst)
-		files.Upload(dst, z, c, drive)
+		files.Upload(dst, z, c, drive, bot)
 	}
 }
 
-func scheduleJob(acr chan *oauth2.Token, client *mongo.Client) {
-	gmail := google.GmailService(acr, client)
-	drive := google.DriveService(acr, client)
+func scheduleJob(acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Session) {
+	gmail := google.GmailService(acr, client, bot)
+	drive := google.DriveService(acr, client, bot)
 
 	// TODO: change back to 24 hours
 	ticker := time.NewTicker(5 * time.Second)
@@ -44,7 +46,7 @@ func scheduleJob(acr chan *oauth2.Token, client *mongo.Client) {
 				log.Default().Printf("Found %d new links", len(newLinks))
 
 				if len(newLinks) > 0 {
-					startJob(newLinks, drive)
+					startJob(newLinks, drive, bot)
 				}
 			}
 		}
@@ -58,8 +60,11 @@ func Bootstrap() {
 	}
 
 	client := database.Connect()
+	bot := discord.Session()
+	defer bot.Close()
+
 	authCodeReceived := make(chan *oauth2.Token)
 
-	go scheduleJob(authCodeReceived, client)
+	go scheduleJob(authCodeReceived, client, bot)
 	server.Listen(authCodeReceived, client)
 }

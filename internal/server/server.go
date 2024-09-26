@@ -17,10 +17,18 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token) {
 	code := r.URL.Query().Get("code")
-	config := google.Config()
+	state := r.URL.Query().Get("state")
+	if code == "" || state == "" {
+		http.Error(w, "Missing code or state", http.StatusUnauthorized)
+		return
+	}
 
+	config := google.Config()
 	tok, err := config.Exchange(context.TODO(), code)
-	util.CheckError("Unable to retrieve token from web", err)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	google.SaveToken("token.json", tok)
 	acr <- tok

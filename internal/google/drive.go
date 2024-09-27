@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"path/filepath"
+	"strings"
 
 	"github.com/ftrbnd/film-sync/internal/util"
 	"google.golang.org/api/drive/v3"
@@ -31,10 +32,21 @@ func Upload(bytes *bytes.Reader, filePath string, folderID string, service *driv
 		MimeType: "image/tiff",
 	}).Media(bytes).Do()
 
-	if err != nil {
-		return err
-	} else {
+	if err == nil {
 		log.Default().Printf("[Google Drive] Uploaded %s!\n", name)
-		return nil
 	}
+	return err
+}
+
+func SetFolderName(url string, name string, service *drive.Service) error {
+	folderID, _ := strings.CutPrefix(url, "https://drive.google.com/drive/u/0/folders/")
+
+	_, err := service.Files.Update(folderID, &drive.File{
+		Name: name,
+	}).Do()
+
+	if err == nil {
+		log.Default().Printf("[Google Drive] Set folder name to %s", name)
+	}
+	return err
 }

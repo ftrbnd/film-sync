@@ -32,8 +32,7 @@ func scheduleJob(acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Se
 	gmail := google.GmailService(acr, client, bot)
 	drive := google.DriveService(acr, client, bot)
 
-	// TODO: change back to 24 hours
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(24 * time.Hour)
 	done := make(chan bool)
 
 	go func() {

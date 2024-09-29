@@ -10,8 +10,11 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func Connect() *mongo.Client {
-	uri := util.LoadEnvVar("MONGODB_URI")
+func Connect() (*mongo.Client, error) {
+	uri, err := util.LoadEnvVar("MONGODB_URI")
+	if err != nil {
+		return nil, err
+	}
 
 	// Use the SetServerAPIOptions() method to set the version of the Stable API on the client
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
@@ -19,12 +22,16 @@ func Connect() *mongo.Client {
 
 	// Create a new client and connect to the server
 	client, err := mongo.Connect(opts)
-	util.CheckError("Failed to connect to database", err)
+	if err != nil {
+		return nil, err
+	}
 
 	// Send a ping to confirm a successful connection
 	err = client.Database("film-sync").RunCommand(context.TODO(), bson.D{{Key: "ping", Value: 1}}).Err()
-	util.CheckError("Failed to ping database", err)
+	if err != nil {
+		return nil, err
+	}
 
 	log.Default().Println("[MongoDB] Successfully connected")
-	return client
+	return client, nil
 }

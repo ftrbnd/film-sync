@@ -10,29 +10,45 @@ import (
 	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/server"
-	"github.com/joho/godotenv"
+	"github.com/ftrbnd/film-sync/internal/util"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/drive/v3"
 )
 
-func startJob(links []string, drive *drive.Service, bot *discordgo.Session) {
+func startJob(links []string, drive *drive.Service, bot *discordgo.Session) error {
 	dst := "output"
 	format := "tif"
 
 	for _, link := range links {
-		z := files.DownloadFrom(link)
+		z, err := files.DownloadFrom(link)
+		if err != nil {
+			return err
+		}
+
 		files.Unzip(z, dst, format)
-		c := files.ConvertToPNG(format, dst)
+		c, err := files.ConvertToPNG(format, dst)
+		if err != nil {
+			return err
+		}
+
 		files.Upload(dst, z, c, drive, bot)
 	}
+
+	return nil
 }
 
-func scheduleJob(acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Session) {
-	gmail := google.GmailService(acr, client, bot)
-	drive := google.DriveService(acr, client, bot)
+func scheduleJob(acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Session) error {
+	gmail, err := google.GmailService(acr, client, bot)
+	if err != nil {
+		return err
+	}
+	drive, err := google.DriveService(acr, client, bot)
+	if err != nil {
+		return err
+	}
 
-	ticker := time.NewTicker(24 * time.Hour)
+	ticker := time.NewTicker(5 * time.Second)
 	done := make(chan bool)
 
 	go func() {
@@ -41,29 +57,49 @@ func scheduleJob(acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Se
 			case <-done:
 				return
 			case <-ticker.C:
-				newLinks := google.CheckEmail(client, gmail)
+				newLinks, err := google.CheckEmail(client, gmail)
+				if err != nil {
+					return
+				}
 				log.Default().Printf("Found %d new links", len(newLinks))
 
 				if len(newLinks) > 0 {
-					startJob(newLinks, drive, bot)
+					err = startJob(newLinks, drive, bot)
+					if err != nil {
+						return
+					}
 				}
 			}
 		}
 	}()
+
+	return nil
 }
 
-func Bootstrap() {
-	err := godotenv.Load()
+func Bootstrap() error {
+	err := util.LoadEnv()
 	if err != nil {
-		log.Default().Println("Failed to load .env file")
+		return err
 	}
 
-	client := database.Connect()
-	bot := discord.Session()
+	client, err := database.Connect()
+	if err != nil {
+		return err
+	}
+
+	bot, err := discord.Session()
+	if err != nil {
+		return err
+	}
 	defer bot.Close()
 
 	authCodeReceived := make(chan *oauth2.Token)
 
 	go scheduleJob(authCodeReceived, client, bot)
-	server.Listen(authCodeReceived, client)
+	err = server.Listen(authCodeReceived, client)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

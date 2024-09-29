@@ -9,11 +9,16 @@ import (
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
-func Session() *discordgo.Session {
-	token := util.LoadEnvVar("DISCORD_TOKEN")
+func Session() (*discordgo.Session, error) {
+	token, err := util.LoadEnvVar("DISCORD_TOKEN")
+	if err != nil {
+		return nil, err
+	}
 
 	s, err := discordgo.New("Bot " + token)
-	util.CheckError("Unable to start Discord session", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to start discord session: %v", err)
+	}
 
 	s.AddHandler(handleInteractionCreate)
 	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
@@ -21,9 +26,11 @@ func Session() *discordgo.Session {
 	})
 
 	err = s.Open()
-	util.CheckError("Failed to open Discord session", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open discord session: %v", err)
+	}
 
-	return s
+	return s, nil
 }
 
 func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -79,19 +86,27 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 	}
 }
 
-func createDMChannel(s *discordgo.Session) *discordgo.Channel {
-	userID := util.LoadEnvVar("DISCORD_USER_ID")
+func createDMChannel(s *discordgo.Session) (*discordgo.Channel, error) {
+	userID, err := util.LoadEnvVar("DISCORD_USER_ID")
+	if err != nil {
+		return nil, err
+	}
 
 	c, err := s.UserChannelCreate(userID)
-	util.CheckError("Failed to create DM channel", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create DM channel: %v", err)
+	}
 
-	return c
+	return c, nil
 }
 
-func SendAuthMessage(authURL string, s *discordgo.Session) {
-	channel := createDMChannel(s)
+func SendAuthMessage(authURL string, s *discordgo.Session) error {
+	channel, err := createDMChannel(s)
+	if err != nil {
+		return err
+	}
 
-	_, err := s.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+	_, err = s.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
 			{
 				Title:       "Authentication required!",
@@ -112,13 +127,20 @@ func SendAuthMessage(authURL string, s *discordgo.Session) {
 			},
 		},
 	})
-	util.CheckError("Failed to send auth message", err)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func SendSuccessMessage(s3Url string, driveUrl string, message string, s *discordgo.Session) {
-	channel := createDMChannel(s)
+func SendSuccessMessage(s3Url string, driveUrl string, message string, s *discordgo.Session) error {
+	channel, err := createDMChannel(s)
+	if err != nil {
+		return err
+	}
 
-	_, err := s.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+	_, err = s.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
 			{
 				Title:       "Upload successful!",
@@ -152,5 +174,9 @@ func SendSuccessMessage(s3Url string, driveUrl string, message string, s *discor
 			},
 		},
 	})
-	util.CheckError("Failed to send success message", err)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

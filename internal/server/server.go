@@ -25,7 +25,11 @@ func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token,
 		return
 	}
 
-	config := google.Config()
+	config, err := google.Config()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	}
+
 	tok, err := config.Exchange(context.TODO(), code)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -49,12 +53,19 @@ func newRouter(acr chan *oauth2.Token, client *mongo.Client) http.Handler {
 	return mux
 }
 
-func Listen(acr chan *oauth2.Token, client *mongo.Client) {
-	port := util.LoadEnvVar("PORT")
+func Listen(acr chan *oauth2.Token, client *mongo.Client) error {
+	port, err := util.LoadEnvVar("PORT")
+	if err != nil {
+		return err
+	}
 	router := newRouter(acr, client)
 
 	log.Default().Printf("[HTTP] Server listening on port %s", port)
 
-	err := http.ListenAndServe(":"+port, router)
-	util.CheckError("Failed to start http server", err)
+	err = http.ListenAndServe(":"+port, router)
+	if err != nil {
+		return fmt.Errorf("failed to start http server: %v", err)
+	}
+
+	return nil
 }

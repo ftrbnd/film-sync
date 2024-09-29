@@ -17,13 +17,19 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-func Upload(from string, zip string, count int, drive *drive.Service, bot *discordgo.Session) {
+func Upload(from string, zip string, count int, drive *drive.Service, bot *discordgo.Session) error {
 	folder := strings.ReplaceAll(filepath.Base(zip), ".zip", "")
 
 	_, err := os.ReadDir(from)
-	util.CheckError("Failed to read directory", err)
+	if err != nil {
+		return fmt.Errorf("failed to read directory: %v", err)
+	}
 
-	folderID := google.CreateFolder(drive, from)
+	folderID, err := google.CreateFolder(drive, from)
+	if err != nil {
+		return err
+	}
+
 	err = filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -56,16 +62,38 @@ func Upload(from string, zip string, count int, drive *drive.Service, bot *disco
 
 		return err
 	})
-	util.CheckError("Failed to walk through directory", err)
+	if err != nil {
+		return err
+	}
 
-	s3Url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", util.LoadEnvVar("AWS_REGION"), util.LoadEnvVar("AWS_BUCKET_NAME"), util.LoadEnvVar("AWS_REGION"), folder)
+	region, err := util.LoadEnvVar("AWS_REGION")
+	if err != nil {
+		return err
+	}
+	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
+	if err != nil {
+		return err
+	}
+
+	s3Url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", region, bucket, region, folder)
 	driveUrl := fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", folderID)
 
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folder, count)
-	discord.SendSuccessMessage(s3Url, driveUrl, message, bot)
+	err = discord.SendSuccessMessage(s3Url, driveUrl, message, bot)
+	if err != nil {
+		return err
+	}
 
 	err = os.RemoveAll(from)
-	util.CheckError("Failed to remove directory", err)
+	if err != nil {
+		return fmt.Errorf("failed to remove directory: %v", err)
+
+	}
 	err = os.Remove(zip)
-	util.CheckError("Failed to remove zip file", err)
+	if err != nil {
+		return fmt.Errorf("failed to remove zip file: %v", err)
+
+	}
+
+	return nil
 }

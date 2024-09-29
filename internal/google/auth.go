@@ -3,6 +3,7 @@ package google
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -33,80 +34,134 @@ type Credentials struct {
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config, acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Session) *http.Client {
-	tok, err := getTokenFromDatabase(client)
+func getClient(config *oauth2.Config, acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Session) (*http.Client, error) {
+	tok, err := database.GetToken(client)
 	if err != nil {
-		getTokenFromWeb(config, bot)
+		err = getTokenFromWeb(config, bot)
+		if err != nil {
+			return nil, err
+		}
 		tok = <-acr
 	}
 
-	return config.Client(context.Background(), tok)
+	return config.Client(context.Background(), tok), nil
 }
 
-func getTokenFromWeb(config *oauth2.Config, bot *discordgo.Session) {
+func getTokenFromWeb(config *oauth2.Config, bot *discordgo.Session) error {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 
-	discord.SendAuthMessage(authURL, bot)
+	err := discord.SendAuthMessage(authURL, bot)
+	if err != nil {
+		return err
+	}
 
 	log.Default().Println("Waiting for user to authenticate...")
+	return nil
 }
 
-func getTokenFromDatabase(client *mongo.Client) (*oauth2.Token, error) {
-	tok, err := database.GetToken(client)
-	return tok, err
-}
+func CredentialsFromEnv() ([]byte, error) {
+	clientID, err := util.LoadEnvVar("CLIENT_ID")
+	if err != nil {
+		return nil, err
+	}
+	projectID, err := util.LoadEnvVar("PROJECT_ID")
+	if err != nil {
+		return nil, err
+	}
+	authURI, err := util.LoadEnvVar("AUTH_URI")
+	if err != nil {
+		return nil, err
+	}
+	tokenURI, err := util.LoadEnvVar("TOKEN_URI")
+	if err != nil {
+		return nil, err
+	}
+	authProviderX509CertURL, err := util.LoadEnvVar("AUTH_PROVIDER_X509_CERT_URL")
+	if err != nil {
+		return nil, err
+	}
+	clientSecret, err := util.LoadEnvVar("CLIENT_SECRET")
+	if err != nil {
+		return nil, err
+	}
+	redirectURI, err := util.LoadEnvVar("REDIRECT_URI")
+	if err != nil {
+		return nil, err
+	}
 
-func CredentialsFromEnv() []byte {
 	credentials := Credentials{
 		Installed: InstalledBody{
-			ClientID:                util.LoadEnvVar("CLIENT_ID"),
-			ProjectID:               util.LoadEnvVar("PROJECT_ID"),
-			AuthURI:                 util.LoadEnvVar("AUTH_URI"),
-			TokenURI:                util.LoadEnvVar("TOKEN_URI"),
-			AuthProviderX509CertURL: util.LoadEnvVar("AUTH_PROVIDER_X509_CERT_URL"),
-			ClientSecret:            util.LoadEnvVar("CLIENT_SECRET"),
-			RedirectURIs:            []string{util.LoadEnvVar("REDIRECT_URI")},
+			ClientID:                clientID,
+			ProjectID:               projectID,
+			AuthURI:                 authURI,
+			TokenURI:                tokenURI,
+			AuthProviderX509CertURL: authProviderX509CertURL,
+			ClientSecret:            clientSecret,
+			RedirectURIs:            []string{redirectURI},
 		},
 	}
 
 	jsonData, err := json.Marshal(credentials)
-	util.CheckError("Unable to read credentials", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read credentials: %v", err)
+	}
 
-	return jsonData
+	return jsonData, nil
 }
 
-func Config() *oauth2.Config {
-	b := CredentialsFromEnv()
+func Config() (*oauth2.Config, error) {
+	b, err := CredentialsFromEnv()
+	if err != nil {
+		return nil, err
+	}
 
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON(b, gmail.GmailReadonlyScope, drive.DriveFileScope)
-	util.CheckError("Unable to parse client secret file to config", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse client secret file to config: %v", err)
+	}
 
-	return config
+	return config, nil
 }
 
-func GmailService(acr chan *oauth2.Token, db *mongo.Client, bot *discordgo.Session) *gmail.Service {
+func GmailService(acr chan *oauth2.Token, db *mongo.Client, bot *discordgo.Session) (*gmail.Service, error) {
 	ctx := context.Background()
 
-	config := Config()
-	client := getClient(config, acr, db, bot)
+	config, err := Config()
+	if err != nil {
+		return nil, err
+	}
+	client, err := getClient(config, acr, db, bot)
+	if err != nil {
+		return nil, err
+	}
 
 	service, err := gmail.NewService(ctx, option.WithHTTPClient(client))
-	util.CheckError("Unable to retrieve Gmail client", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to retrieve Gmail client: %v", err)
+	}
 
 	log.Default().Println("[Gmail] Successfully retrieved service")
-	return service
+	return service, nil
 }
 
-func DriveService(acr chan *oauth2.Token, db *mongo.Client, bot *discordgo.Session) *drive.Service {
+func DriveService(acr chan *oauth2.Token, db *mongo.Client, bot *discordgo.Session) (*drive.Service, error) {
 	ctx := context.Background()
 
-	config := Config()
-	client := getClient(config, acr, db, bot)
+	config, err := Config()
+	if err != nil {
+		return nil, err
+	}
+	client, err := getClient(config, acr, db, bot)
+	if err != nil {
+		return nil, err
+	}
 
 	service, err := drive.NewService(ctx, option.WithHTTPClient(client))
-	util.CheckError("Unable to retrieve Google Drive client", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to retrieve Google Drive client: %v", err)
+	}
 
 	log.Default().Println("[Google Drive] Successfully retrieved service")
-	return service
+	return service, nil
 }

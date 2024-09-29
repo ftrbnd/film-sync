@@ -1,7 +1,13 @@
 package main
 
-import "github.com/ftrbnd/film-sync/internal/app"
+import (
+	"github.com/ftrbnd/film-sync/internal/app"
+	"github.com/ftrbnd/film-sync/internal/util"
+)
 
 func main() {
-	app.Bootstrap()
+	err := app.Bootstrap()
+	if err != nil {
+		util.CheckError("Error found", err)
+	}
 }

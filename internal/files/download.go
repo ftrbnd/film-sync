@@ -6,17 +6,18 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ftrbnd/film-sync/internal/util"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 )
 
-func DownloadFrom(link string) string {
+func DownloadFrom(link string) (string, error) {
 	log.Default().Printf("Downloading from %s...", link)
 
 	wd, err := os.Getwd()
-	util.CheckError("Failed to get working directory", err)
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %v", err)
+	}
 
 	u := launcher.New().Leakless(false).MustLaunch()
 	browser := rod.New().ControlURL(u).MustConnect()
@@ -53,8 +54,10 @@ func DownloadFrom(link string) string {
 
 	newName := filepath.Join(wd, res.SuggestedFilename)
 	err = os.Rename(file, newName)
-	util.CheckError("Failed to rename file", err)
-	log.Default().Println("Renamed file to", newName)
+	if err != nil {
+		return "", fmt.Errorf("failed to rename file: %v", err)
+	}
 
-	return newName
+	log.Default().Println("Renamed file to", newName)
+	return newName, nil
 }

@@ -7,22 +7,32 @@ import (
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
-	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 )
 
 func main() {
-	err := godotenv.Load()
-	util.CheckError("Error loading .env file", err)
+	err := util.LoadEnv()
+	if err != nil {
+		panic(err)
+	}
 
-	client := database.Connect()
+	client, err := database.Connect()
+	if err != nil {
+		panic(err)
+	}
 	defer client.Disconnect(context.Background())
 
-	bot := discord.Session()
+	bot, err := discord.Session()
+	if err != nil {
+		panic(err)
+	}
 	defer bot.Close()
 
 	authCodeReceived := make(chan *oauth2.Token)
-	service := google.GmailService(authCodeReceived, client, bot)
+	service, err := google.GmailService(authCodeReceived, client, bot)
+	if err != nil {
+		panic(err)
+	}
 
 	google.CheckEmail(client, service)
 

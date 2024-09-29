@@ -2,39 +2,45 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"slices"
 
-	"github.com/ftrbnd/film-sync/internal/util"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/gmail/v1"
 )
 
-func GetEmails(c *mongo.Client) []Email {
+func GetEmails(c *mongo.Client) ([]Email, error) {
 	collection := EmailCollection(c)
 
 	cur, err := collection.Find(context.Background(), bson.D{})
-	util.CheckError("Unable to get all emails", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get all emails: %v", err)
+	}
 
 	defer cur.Close(context.Background())
 
 	var results []Email
 	err = cur.All(context.Background(), &results)
-	util.CheckError("Unable to decode results", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode results: %v", err)
+	}
 
-	return results
+	return results, nil
 }
 
-func AddEmail(c *mongo.Client, e Email) *mongo.InsertOneResult {
+func AddEmail(c *mongo.Client, e Email) (*mongo.InsertOneResult, error) {
 	collection := EmailCollection(c)
 
 	res, err := collection.InsertOne(context.TODO(), e)
-	util.CheckError("Unable to insert document", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to insert document: %v", err)
+	}
 
 	log.Default().Printf("Inserted email %s to database", e.EmailID)
-	return res
+	return res, nil
 }
 
 func EmailExists(savedEmails []Email, fetchedEmail *gmail.Message) bool {
@@ -45,17 +51,21 @@ func EmailExists(savedEmails []Email, fetchedEmail *gmail.Message) bool {
 	return exists
 }
 
-func SaveToken(c *mongo.Client, tok *oauth2.Token) *mongo.InsertOneResult {
+func SaveToken(c *mongo.Client, tok *oauth2.Token) (*mongo.InsertOneResult, error) {
 	collection := OAuthTokenCollection(c)
 
 	_, err := collection.DeleteMany(context.TODO(), bson.D{})
-	util.CheckError("Unable to reset OAuthToken collection", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to reset oauth_token collection: %v", err)
+	}
 
 	res, err := collection.InsertOne(context.TODO(), tok)
-	util.CheckError("Unable to save token", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to save token: %v", err)
+	}
 
 	log.Default().Println("Saved token to database")
-	return res
+	return res, nil
 }
 
 func GetToken(c *mongo.Client) (*oauth2.Token, error) {

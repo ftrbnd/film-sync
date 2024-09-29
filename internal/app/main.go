@@ -12,10 +12,9 @@ import (
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"golang.org/x/oauth2"
-	"google.golang.org/api/drive/v3"
 )
 
-func startJob(links []string, drive *drive.Service, bot *discordgo.Session) error {
+func startJob(links []string, bot *discordgo.Session) error {
 	dst := "output"
 	format := "tif"
 
@@ -31,22 +30,13 @@ func startJob(links []string, drive *drive.Service, bot *discordgo.Session) erro
 			return err
 		}
 
-		files.Upload(dst, z, c, drive, bot)
+		files.Upload(dst, z, c, bot)
 	}
 
 	return nil
 }
 
-func scheduleJob(acr chan *oauth2.Token, bot *discordgo.Session) error {
-	gmail, err := google.GmailService(acr, bot)
-	if err != nil {
-		return err
-	}
-	drive, err := google.DriveService(acr, bot)
-	if err != nil {
-		return err
-	}
-
+func scheduleJob(bot *discordgo.Session) error {
 	ticker := time.NewTicker(5 * time.Second)
 	done := make(chan bool)
 
@@ -56,14 +46,14 @@ func scheduleJob(acr chan *oauth2.Token, bot *discordgo.Session) error {
 			case <-done:
 				return
 			case <-ticker.C:
-				newLinks, err := google.CheckEmail(gmail)
+				newLinks, err := google.CheckEmail()
 				if err != nil {
 					return
 				}
 				log.Default().Printf("Found %d new links", len(newLinks))
 
 				if len(newLinks) > 0 {
-					err = startJob(newLinks, drive, bot)
+					err = startJob(newLinks, bot)
 					if err != nil {
 						return
 					}
@@ -94,7 +84,16 @@ func Bootstrap() error {
 
 	authCodeReceived := make(chan *oauth2.Token)
 
-	go scheduleJob(authCodeReceived, bot)
+	err = google.GmailService(authCodeReceived, bot)
+	if err != nil {
+		return err
+	}
+	err = google.DriveService(authCodeReceived, bot)
+	if err != nil {
+		return err
+	}
+
+	go scheduleJob(bot)
 	err = server.Listen(authCodeReceived)
 	if err != nil {
 		return err

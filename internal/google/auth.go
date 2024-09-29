@@ -32,6 +32,9 @@ type Credentials struct {
 	Installed InstalledBody `json:"installed"`
 }
 
+var gmailSrv *gmail.Service
+var driveSrv *drive.Service
+
 // Retrieve a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config, acr chan *oauth2.Token, bot *discordgo.Session) (*http.Client, error) {
 	tok, err := database.GetToken()
@@ -123,44 +126,44 @@ func Config() (*oauth2.Config, error) {
 	return config, nil
 }
 
-func GmailService(acr chan *oauth2.Token, bot *discordgo.Session) (*gmail.Service, error) {
+func GmailService(acr chan *oauth2.Token, bot *discordgo.Session) error {
 	ctx := context.Background()
 
 	config, err := Config()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	client, err := getClient(config, acr, bot)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	service, err := gmail.NewService(ctx, option.WithHTTPClient(client))
+	gmailSrv, err = gmail.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve Gmail client: %v", err)
+		return fmt.Errorf("unable to retrieve Gmail client: %v", err)
 	}
 
 	log.Default().Println("[Gmail] Successfully retrieved service")
-	return service, nil
+	return nil
 }
 
-func DriveService(acr chan *oauth2.Token, bot *discordgo.Session) (*drive.Service, error) {
+func DriveService(acr chan *oauth2.Token, bot *discordgo.Session) error {
 	ctx := context.Background()
 
 	config, err := Config()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	client, err := getClient(config, acr, bot)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	service, err := drive.NewService(ctx, option.WithHTTPClient(client))
+	driveSrv, err = drive.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve Google Drive client: %v", err)
+		return fmt.Errorf("unable to retrieve Google Drive client: %v", err)
 	}
 
 	log.Default().Println("[Google Drive] Successfully retrieved service")
-	return service, nil
+	return nil
 }

@@ -14,10 +14,9 @@ import (
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
-	"google.golang.org/api/drive/v3"
 )
 
-func Upload(from string, zip string, count int, drive *drive.Service, bot *discordgo.Session) error {
+func Upload(from string, zip string, count int, bot *discordgo.Session) error {
 	folder := strings.ReplaceAll(filepath.Base(zip), ".zip", "")
 
 	_, err := os.ReadDir(from)
@@ -25,7 +24,7 @@ func Upload(from string, zip string, count int, drive *drive.Service, bot *disco
 		return fmt.Errorf("failed to read directory: %v", err)
 	}
 
-	folderID, err := google.CreateFolder(drive, from)
+	folderID, err := google.CreateFolder(from)
 	if err != nil {
 		return err
 	}
@@ -57,7 +56,7 @@ func Upload(from string, zip string, count int, drive *drive.Service, bot *disco
 		if format == ".png" {
 			err = myaws.Upload(fileBytes, fileType, size, from, path)
 		} else if format == ".tif" {
-			err = google.Upload(fileBytes, path, folderID, drive)
+			err = google.Upload(fileBytes, path, folderID)
 		}
 
 		return err

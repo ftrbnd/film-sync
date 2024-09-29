@@ -26,12 +26,12 @@ func main() {
 	defer bot.Close()
 
 	authCodeReceived := make(chan *oauth2.Token)
-	service, err := google.GmailService(authCodeReceived, bot)
+	err = google.GmailService(authCodeReceived, bot)
 	if err != nil {
 		panic(err)
 	}
 
-	google.CheckEmail(service)
+	google.CheckEmail()
 
 	<-authCodeReceived
 }

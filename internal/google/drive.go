@@ -11,13 +11,13 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-func CreateFolder(service *drive.Service, name string) (string, error) {
+func CreateFolder(name string) (string, error) {
 	parent, err := util.LoadEnvVar("DRIVE_FOLDER_ID")
 	if err != nil {
 		return "", err
 	}
 
-	res, err := service.Files.Create(&drive.File{
+	res, err := driveSrv.Files.Create(&drive.File{
 		MimeType: "application/vnd.google-apps.folder",
 		Name:     name,
 		Parents:  []string{parent},
@@ -29,10 +29,10 @@ func CreateFolder(service *drive.Service, name string) (string, error) {
 	return res.Id, nil
 }
 
-func Upload(bytes *bytes.Reader, filePath string, folderID string, service *drive.Service) error {
+func Upload(bytes *bytes.Reader, filePath string, folderID string) error {
 	name := filepath.Base(filePath)
 
-	_, err := service.Files.Create(&drive.File{
+	_, err := driveSrv.Files.Create(&drive.File{
 		Parents:  []string{folderID},
 		Name:     name,
 		MimeType: "image/tiff",
@@ -46,10 +46,10 @@ func Upload(bytes *bytes.Reader, filePath string, folderID string, service *driv
 	return nil
 }
 
-func SetFolderName(url string, name string, service *drive.Service) error {
+func SetFolderName(url string, name string) error {
 	folderID, _ := strings.CutPrefix(url, "https://drive.google.com/drive/u/0/folders/")
 
-	_, err := service.Files.Update(folderID, &drive.File{
+	_, err := driveSrv.Files.Update(folderID, &drive.File{
 		Name: name,
 	}).Do()
 	if err != nil {

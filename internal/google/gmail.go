@@ -12,10 +12,10 @@ import (
 	"google.golang.org/api/gmail/v1"
 )
 
-func getEmailsBySender(sender string, service *gmail.Service) ([]*gmail.Message, error) {
+func getEmailsBySender(sender string) ([]*gmail.Message, error) {
 	q := fmt.Sprintf("from:%s", sender)
 
-	res, err := service.Users.Messages.List("me").Q(q).Do()
+	res, err := gmailSrv.Users.Messages.List("me").Q(q).Do()
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve messages from %s: %v", sender, err)
 	}
@@ -23,11 +23,11 @@ func getEmailsBySender(sender string, service *gmail.Service) ([]*gmail.Message,
 	return res.Messages, nil
 }
 
-func filterEmailsByMetadata(messages []*gmail.Message, fieldName string, fieldValue string, service *gmail.Service) ([]*gmail.Message, error) {
+func filterEmailsByMetadata(messages []*gmail.Message, fieldName string, fieldValue string) ([]*gmail.Message, error) {
 	var emails []*gmail.Message
 
 	for _, msg := range messages {
-		message, err := service.Users.Messages.Get("me", msg.Id).Format("metadata").Do()
+		message, err := gmailSrv.Users.Messages.Get("me", msg.Id).Format("metadata").Do()
 		if err != nil {
 			return nil, fmt.Errorf("unable to retrieve message_%s: %v", msg.Id, err)
 
@@ -45,8 +45,8 @@ func filterEmailsByMetadata(messages []*gmail.Message, fieldName string, fieldVa
 	return emails, nil
 }
 
-func GetDownloadLink(message *gmail.Message, service *gmail.Service) (string, error) {
-	msg, err := service.Users.Messages.Get("me", message.Id).Format("full").Do()
+func GetDownloadLink(message *gmail.Message) (string, error) {
+	msg, err := gmailSrv.Users.Messages.Get("me", message.Id).Format("full").Do()
 	if err != nil {
 		return "", fmt.Errorf("unable to retrieve message: %v", err)
 	}
@@ -63,7 +63,7 @@ func GetDownloadLink(message *gmail.Message, service *gmail.Service) (string, er
 	return link, nil
 }
 
-func FetchEmails(s *gmail.Service) ([]*gmail.Message, error) {
+func FetchEmails() ([]*gmail.Message, error) {
 	fromEmail, err := util.LoadEnvVar("FROM_EMAIL")
 	if err != nil {
 		return nil, err
@@ -73,11 +73,11 @@ func FetchEmails(s *gmail.Service) ([]*gmail.Message, error) {
 		return nil, err
 	}
 
-	messages, err := getEmailsBySender(fromEmail, s)
+	messages, err := getEmailsBySender(fromEmail)
 	if err != nil {
 		return nil, err
 	}
-	filtered, err := filterEmailsByMetadata(messages, "Reply-To", replyToEmail, s)
+	filtered, err := filterEmailsByMetadata(messages, "Reply-To", replyToEmail)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +85,10 @@ func FetchEmails(s *gmail.Service) ([]*gmail.Message, error) {
 	return filtered, nil
 }
 
-func CheckEmail(s *gmail.Service) ([]string, error) {
+func CheckEmail() ([]string, error) {
 	log.Default().Println("Checking email...")
 
-	emails, err := FetchEmails(s)
+	emails, err := FetchEmails()
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func CheckEmail(s *gmail.Service) ([]string, error) {
 	for _, email := range emails {
 		exists := database.EmailExists(saved, email)
 		if !exists {
-			link, err := GetDownloadLink(email, s)
+			link, err := GetDownloadLink(email)
 			if err != nil {
 				return nil, err
 			}

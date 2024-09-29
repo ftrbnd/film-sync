@@ -9,7 +9,6 @@ import (
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 	"google.golang.org/api/gmail/v1"
 )
 
@@ -86,14 +85,14 @@ func FetchEmails(s *gmail.Service) ([]*gmail.Message, error) {
 	return filtered, nil
 }
 
-func CheckEmail(c *mongo.Client, s *gmail.Service) ([]string, error) {
+func CheckEmail(s *gmail.Service) ([]string, error) {
 	log.Default().Println("Checking email...")
 
 	emails, err := FetchEmails(s)
 	if err != nil {
 		return nil, err
 	}
-	saved, err := database.GetEmails(c)
+	saved, err := database.GetEmails()
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +109,7 @@ func CheckEmail(c *mongo.Client, s *gmail.Service) ([]string, error) {
 
 			newEmail := database.Email{ID: bson.NewObjectID(), EmailID: email.Id, DownloadLink: link}
 
-			database.AddEmail(c, newEmail)
+			database.AddEmail(newEmail)
 
 			newLinks = append(newLinks, link)
 		} else {

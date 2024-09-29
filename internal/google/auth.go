@@ -11,7 +11,6 @@ import (
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/util"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
@@ -34,8 +33,8 @@ type Credentials struct {
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config, acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Session) (*http.Client, error) {
-	tok, err := database.GetToken(client)
+func getClient(config *oauth2.Config, acr chan *oauth2.Token, bot *discordgo.Session) (*http.Client, error) {
+	tok, err := database.GetToken()
 	if err != nil {
 		err = getTokenFromWeb(config, bot)
 		if err != nil {
@@ -124,14 +123,14 @@ func Config() (*oauth2.Config, error) {
 	return config, nil
 }
 
-func GmailService(acr chan *oauth2.Token, db *mongo.Client, bot *discordgo.Session) (*gmail.Service, error) {
+func GmailService(acr chan *oauth2.Token, bot *discordgo.Session) (*gmail.Service, error) {
 	ctx := context.Background()
 
 	config, err := Config()
 	if err != nil {
 		return nil, err
 	}
-	client, err := getClient(config, acr, db, bot)
+	client, err := getClient(config, acr, bot)
 	if err != nil {
 		return nil, err
 	}
@@ -145,14 +144,14 @@ func GmailService(acr chan *oauth2.Token, db *mongo.Client, bot *discordgo.Sessi
 	return service, nil
 }
 
-func DriveService(acr chan *oauth2.Token, db *mongo.Client, bot *discordgo.Session) (*drive.Service, error) {
+func DriveService(acr chan *oauth2.Token, bot *discordgo.Session) (*drive.Service, error) {
 	ctx := context.Background()
 
 	config, err := Config()
 	if err != nil {
 		return nil, err
 	}
-	client, err := getClient(config, acr, db, bot)
+	client, err := getClient(config, acr, bot)
 	if err != nil {
 		return nil, err
 	}

@@ -12,8 +12,8 @@ import (
 	"google.golang.org/api/gmail/v1"
 )
 
-func GetEmails(c *mongo.Client) ([]Email, error) {
-	collection := EmailCollection(c)
+func GetEmails() ([]Email, error) {
+	collection := GetCollection("emails")
 
 	cur, err := collection.Find(context.Background(), bson.D{})
 	if err != nil {
@@ -31,8 +31,8 @@ func GetEmails(c *mongo.Client) ([]Email, error) {
 	return results, nil
 }
 
-func AddEmail(c *mongo.Client, e Email) (*mongo.InsertOneResult, error) {
-	collection := EmailCollection(c)
+func AddEmail(e Email) (*mongo.InsertOneResult, error) {
+	collection := GetCollection("emails")
 
 	res, err := collection.InsertOne(context.TODO(), e)
 	if err != nil {
@@ -51,8 +51,8 @@ func EmailExists(savedEmails []Email, fetchedEmail *gmail.Message) bool {
 	return exists
 }
 
-func SaveToken(c *mongo.Client, tok *oauth2.Token) (*mongo.InsertOneResult, error) {
-	collection := OAuthTokenCollection(c)
+func SaveToken(tok *oauth2.Token) (*mongo.InsertOneResult, error) {
+	collection := GetCollection("oauth_tokens")
 
 	_, err := collection.DeleteMany(context.TODO(), bson.D{})
 	if err != nil {
@@ -68,8 +68,8 @@ func SaveToken(c *mongo.Client, tok *oauth2.Token) (*mongo.InsertOneResult, erro
 	return res, nil
 }
 
-func GetToken(c *mongo.Client) (*oauth2.Token, error) {
-	collection := OAuthTokenCollection(c)
+func GetToken() (*oauth2.Token, error) {
+	collection := GetCollection("oauth_tokens")
 
 	res := collection.FindOne(context.TODO(), bson.D{})
 

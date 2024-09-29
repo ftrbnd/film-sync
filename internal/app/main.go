@@ -11,7 +11,6 @@ import (
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/ftrbnd/film-sync/internal/util"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/drive/v3"
 )
@@ -38,12 +37,12 @@ func startJob(links []string, drive *drive.Service, bot *discordgo.Session) erro
 	return nil
 }
 
-func scheduleJob(acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Session) error {
-	gmail, err := google.GmailService(acr, client, bot)
+func scheduleJob(acr chan *oauth2.Token, bot *discordgo.Session) error {
+	gmail, err := google.GmailService(acr, bot)
 	if err != nil {
 		return err
 	}
-	drive, err := google.DriveService(acr, client, bot)
+	drive, err := google.DriveService(acr, bot)
 	if err != nil {
 		return err
 	}
@@ -57,7 +56,7 @@ func scheduleJob(acr chan *oauth2.Token, client *mongo.Client, bot *discordgo.Se
 			case <-done:
 				return
 			case <-ticker.C:
-				newLinks, err := google.CheckEmail(client, gmail)
+				newLinks, err := google.CheckEmail(gmail)
 				if err != nil {
 					return
 				}
@@ -82,7 +81,7 @@ func Bootstrap() error {
 		return err
 	}
 
-	client, err := database.Connect()
+	err = database.Connect()
 	if err != nil {
 		return err
 	}
@@ -95,8 +94,8 @@ func Bootstrap() error {
 
 	authCodeReceived := make(chan *oauth2.Token)
 
-	go scheduleJob(authCodeReceived, client, bot)
-	err = server.Listen(authCodeReceived, client)
+	go scheduleJob(authCodeReceived, bot)
+	err = server.Listen(authCodeReceived)
 	if err != nil {
 		return err
 	}

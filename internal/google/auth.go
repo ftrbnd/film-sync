@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/util"
@@ -36,10 +35,10 @@ var gmailSrv *gmail.Service
 var driveSrv *drive.Service
 
 // Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config, acr chan *oauth2.Token, bot *discordgo.Session) (*http.Client, error) {
+func getClient(config *oauth2.Config, acr chan *oauth2.Token) (*http.Client, error) {
 	tok, err := database.GetToken()
 	if err != nil {
-		err = getTokenFromWeb(config, bot)
+		err = getTokenFromWeb(config)
 		if err != nil {
 			return nil, err
 		}
@@ -49,10 +48,10 @@ func getClient(config *oauth2.Config, acr chan *oauth2.Token, bot *discordgo.Ses
 	return config.Client(context.Background(), tok), nil
 }
 
-func getTokenFromWeb(config *oauth2.Config, bot *discordgo.Session) error {
+func getTokenFromWeb(config *oauth2.Config) error {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 
-	err := discord.SendAuthMessage(authURL, bot)
+	err := discord.SendAuthMessage(authURL)
 	if err != nil {
 		return err
 	}
@@ -126,14 +125,14 @@ func Config() (*oauth2.Config, error) {
 	return config, nil
 }
 
-func GmailService(acr chan *oauth2.Token, bot *discordgo.Session) error {
+func GmailService(acr chan *oauth2.Token) error {
 	ctx := context.Background()
 
 	config, err := Config()
 	if err != nil {
 		return err
 	}
-	client, err := getClient(config, acr, bot)
+	client, err := getClient(config, acr)
 	if err != nil {
 		return err
 	}
@@ -147,14 +146,14 @@ func GmailService(acr chan *oauth2.Token, bot *discordgo.Session) error {
 	return nil
 }
 
-func DriveService(acr chan *oauth2.Token, bot *discordgo.Session) error {
+func DriveService(acr chan *oauth2.Token) error {
 	ctx := context.Background()
 
 	config, err := Config()
 	if err != nil {
 		return err
 	}
-	client, err := getClient(config, acr, bot)
+	client, err := getClient(config, acr)
 	if err != nil {
 		return err
 	}

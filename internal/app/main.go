@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/files"
@@ -14,7 +13,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func startJob(links []string, bot *discordgo.Session) error {
+func startJob(links []string) error {
 	dst := "output"
 	format := "tif"
 
@@ -30,13 +29,13 @@ func startJob(links []string, bot *discordgo.Session) error {
 			return err
 		}
 
-		files.Upload(dst, z, c, bot)
+		files.Upload(dst, z, c)
 	}
 
 	return nil
 }
 
-func scheduleJob(bot *discordgo.Session) error {
+func scheduleJob() error {
 	ticker := time.NewTicker(5 * time.Second)
 	done := make(chan bool)
 
@@ -53,7 +52,7 @@ func scheduleJob(bot *discordgo.Session) error {
 				log.Default().Printf("Found %d new links", len(newLinks))
 
 				if len(newLinks) > 0 {
-					err = startJob(newLinks, bot)
+					err = startJob(newLinks)
 					if err != nil {
 						return
 					}
@@ -75,25 +74,26 @@ func Bootstrap() error {
 	if err != nil {
 		return err
 	}
+	defer database.Disconnect()
 
-	bot, err := discord.Session()
+	err = discord.OpenSession()
 	if err != nil {
 		return err
 	}
-	defer bot.Close()
+	defer discord.CloseSession()
 
 	authCodeReceived := make(chan *oauth2.Token)
 
-	err = google.GmailService(authCodeReceived, bot)
+	err = google.GmailService(authCodeReceived)
 	if err != nil {
 		return err
 	}
-	err = google.DriveService(authCodeReceived, bot)
+	err = google.DriveService(authCodeReceived)
 	if err != nil {
 		return err
 	}
 
-	go scheduleJob(bot)
+	go scheduleJob()
 	err = server.Listen(authCodeReceived)
 	if err != nil {
 		return err

@@ -9,14 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	myaws "github.com/ftrbnd/film-sync/internal/aws"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
-func Upload(from string, zip string, count int, bot *discordgo.Session) error {
+func Upload(from string, zip string, count int) error {
 	folder := strings.ReplaceAll(filepath.Base(zip), ".zip", "")
 
 	_, err := os.ReadDir(from)
@@ -78,7 +77,7 @@ func Upload(from string, zip string, count int, bot *discordgo.Session) error {
 	driveUrl := fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", folderID)
 
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folder, count)
-	err = discord.SendSuccessMessage(s3Url, driveUrl, message, bot)
+	err = discord.SendSuccessMessage(s3Url, driveUrl, message)
 	if err != nil {
 		return err
 	}

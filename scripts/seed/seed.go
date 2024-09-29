@@ -18,20 +18,24 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer database.Disconnect()
 
-	bot, err := discord.Session()
+	err = discord.OpenSession()
 	if err != nil {
 		panic(err)
 	}
-	defer bot.Close()
+	defer discord.CloseSession()
 
 	authCodeReceived := make(chan *oauth2.Token)
-	err = google.GmailService(authCodeReceived, bot)
+	err = google.GmailService(authCodeReceived)
 	if err != nil {
 		panic(err)
 	}
 
-	google.CheckEmail()
+	_, err = google.CheckEmail()
+	if err != nil {
+		panic(err)
+	}
 
 	<-authCodeReceived
 }

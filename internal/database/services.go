@@ -75,6 +75,20 @@ func GetToken() (*oauth2.Token, error) {
 
 	tok := &oauth2.Token{}
 	err := res.Decode(tok)
+	if err != nil {
+		return nil, err
+	}
 
-	return tok, err
+	return tok, nil
+}
+
+func TokenCount() (int64, error) {
+	collection := GetCollection("oauth_tokens")
+
+	count, err := collection.CountDocuments(context.TODO(), bson.D{})
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

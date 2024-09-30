@@ -9,14 +9,13 @@ import (
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
-	"golang.org/x/oauth2"
 )
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello film-sync!")
 }
 
-func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token) {
+func authHandler(w http.ResponseWriter, r *http.Request, acr chan bool) {
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 	if code == "" || state == "" {
@@ -36,12 +35,13 @@ func authHandler(w http.ResponseWriter, r *http.Request, acr chan *oauth2.Token)
 	}
 
 	database.SaveToken(tok)
-	acr <- tok
+	acr <- true
+	acr <- true
 
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")
 }
 
-func newRouter(acr chan *oauth2.Token) http.Handler {
+func newRouter(acr chan bool) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", indexHandler)
@@ -52,7 +52,7 @@ func newRouter(acr chan *oauth2.Token) http.Handler {
 	return mux
 }
 
-func Listen(acr chan *oauth2.Token) error {
+func Listen(acr chan bool) error {
 	port, err := util.LoadEnvVar("PORT")
 	if err != nil {
 		return err

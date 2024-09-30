@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/ftrbnd/film-sync/internal/aws"
+	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
@@ -17,7 +19,7 @@ func OpenSession() error {
 		return err
 	}
 
-	bot, err := discordgo.New("Bot " + token)
+	bot, err = discordgo.New("Bot " + token)
 	if err != nil {
 		return fmt.Errorf("unable to start discord session: %v", err)
 	}
@@ -73,8 +75,8 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 
 		after, _ := strings.CutPrefix(data.CustomID, "folder_name_modal_")
 		urls := strings.Split(after, ",")
-		// TODO: set folder names
-		log.Default().Println(urls)
+		aws.SetFolderName(urls[0], folderName)
+		google.SetFolderName(urls[1], folderName)
 
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -137,6 +139,7 @@ func SendAuthMessage(authURL string) error {
 		return err
 	}
 
+	log.Default().Println("Waiting for user to authenticate...")
 	return nil
 }
 

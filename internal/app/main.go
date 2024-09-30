@@ -29,7 +29,15 @@ func startJob(links []string) error {
 			return err
 		}
 
-		files.Upload(dst, z, c)
+		s3Url, driveUrl, message, err := files.Upload(dst, z, c)
+		if err != nil {
+			return err
+		}
+
+		err = discord.SendSuccessMessage(s3Url, driveUrl, message)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -54,7 +62,7 @@ func scheduleJob() error {
 				if len(newLinks) > 0 {
 					err = startJob(newLinks)
 					if err != nil {
-						return
+						panic(err)
 					}
 				}
 			}
@@ -82,18 +90,27 @@ func Bootstrap() error {
 	}
 	defer discord.CloseSession()
 
-	authCodeReceived := make(chan *oauth2.Token)
+	authCodeReceived := make(chan bool)
 
-	err = google.GmailService(authCodeReceived)
+	count, err := database.TokenCount()
+	if err != nil || count == 0 {
+		config, _ := google.Config()
+		authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+		discord.SendAuthMessage(authURL)
+	} else {
+		go func() {
+			authCodeReceived <- true
+			authCodeReceived <- true
+		}()
+	}
+
+	google.GmailService(authCodeReceived)
+	google.DriveService(authCodeReceived)
+	err = scheduleJob()
 	if err != nil {
 		return err
 	}
-	err = google.DriveService(authCodeReceived)
-	if err != nil {
-		return err
-	}
 
-	go scheduleJob()
 	err = server.Listen(authCodeReceived)
 	if err != nil {
 		return err

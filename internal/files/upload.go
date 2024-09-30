@@ -4,28 +4,28 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	myaws "github.com/ftrbnd/film-sync/internal/aws"
-	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
-func Upload(from string, zip string, count int) error {
+func Upload(from string, zip string, count int) (string, string, string, error) {
 	folder := strings.ReplaceAll(filepath.Base(zip), ".zip", "")
 
 	_, err := os.ReadDir(from)
 	if err != nil {
-		return fmt.Errorf("failed to read directory: %v", err)
+		return "", "", "", fmt.Errorf("failed to read directory: %v", err)
 	}
 
 	folderID, err := google.CreateFolder(from)
 	if err != nil {
-		return err
+		return "", "", "", err
 	}
 
 	err = filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
@@ -61,37 +61,33 @@ func Upload(from string, zip string, count int) error {
 		return err
 	})
 	if err != nil {
-		return err
+		return "", "", "", err
 	}
 
 	region, err := util.LoadEnvVar("AWS_REGION")
 	if err != nil {
-		return err
+		return "", "", "", err
 	}
 	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
 	if err != nil {
-		return err
+		return "", "", "", err
 	}
 
 	s3Url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", region, bucket, region, folder)
 	driveUrl := fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", folderID)
 
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folder, count)
-	err = discord.SendSuccessMessage(s3Url, driveUrl, message)
-	if err != nil {
-		return err
-	}
 
 	err = os.RemoveAll(from)
 	if err != nil {
-		return fmt.Errorf("failed to remove directory: %v", err)
-
+		log.Default().Printf("Failed to remove directory: %v", err)
 	}
+
 	err = os.Remove(zip)
 	if err != nil {
-		return fmt.Errorf("failed to remove zip file: %v", err)
+		log.Default().Printf("Failed to remove zip file: %v", err)
 
 	}
 
-	return nil
+	return s3Url, driveUrl, message, nil
 }

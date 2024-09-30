@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/ftrbnd/film-sync/internal/database"
-	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -33,32 +32,6 @@ type Credentials struct {
 
 var gmailSrv *gmail.Service
 var driveSrv *drive.Service
-
-// Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config, acr chan *oauth2.Token) (*http.Client, error) {
-	tok, err := database.GetToken()
-	if err != nil {
-		err = getTokenFromWeb(config)
-		if err != nil {
-			return nil, err
-		}
-		tok = <-acr
-	}
-
-	return config.Client(context.Background(), tok), nil
-}
-
-func getTokenFromWeb(config *oauth2.Config) error {
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-
-	err := discord.SendAuthMessage(authURL)
-	if err != nil {
-		return err
-	}
-
-	log.Default().Println("Waiting for user to authenticate...")
-	return nil
-}
 
 func CredentialsFromEnv() ([]byte, error) {
 	clientID, err := util.LoadEnvVar("CLIENT_ID")
@@ -125,14 +98,26 @@ func Config() (*oauth2.Config, error) {
 	return config, nil
 }
 
-func GmailService(acr chan *oauth2.Token) error {
+// Retrieve a token, saves the token, then returns the generated client.
+func getClient(config *oauth2.Config) (*http.Client, error) {
+	tok, err := database.GetToken()
+	if err != nil {
+		return nil, err
+	}
+
+	return config.Client(context.Background(), tok), nil
+}
+
+func GmailService(acr chan bool) error {
 	ctx := context.Background()
 
 	config, err := Config()
 	if err != nil {
 		return err
 	}
-	client, err := getClient(config, acr)
+
+	<-acr // block until we have an auth token in db
+	client, err := getClient(config)
 	if err != nil {
 		return err
 	}
@@ -146,14 +131,16 @@ func GmailService(acr chan *oauth2.Token) error {
 	return nil
 }
 
-func DriveService(acr chan *oauth2.Token) error {
+func DriveService(acr chan bool) error {
 	ctx := context.Background()
 
 	config, err := Config()
 	if err != nil {
 		return err
 	}
-	client, err := getClient(config, acr)
+
+	<-acr // block until we have an auth token in db
+	client, err := getClient(config)
 	if err != nil {
 		return err
 	}

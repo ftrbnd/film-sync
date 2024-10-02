@@ -57,3 +57,7 @@ func SetFolderName(folderID string, name string) error {
 	log.Default().Printf("[Google Drive] Set folder name to %s", name)
 	return nil
 }
+
+func FolderLink(folderID string) string {
+	return fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", folderID)
+}

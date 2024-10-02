@@ -149,17 +149,11 @@ func SendSuccessMessage(s3Folder string, driveFolderID string, message string) e
 		return err
 	}
 
-	region, err := util.LoadEnvVar("AWS_REGION")
+	s3Url, err := aws.FolderLink(s3Folder)
 	if err != nil {
 		return err
 	}
-	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
-	if err != nil {
-		return err
-	}
-
-	s3Url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", region, bucket, region, s3Folder)
-	driveUrl := fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", driveFolderID)
+	driveUrl := google.FolderLink(driveFolderID)
 
 	_, err = bot.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{

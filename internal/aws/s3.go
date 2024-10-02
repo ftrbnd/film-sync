@@ -100,3 +100,18 @@ func SetFolderName(old string, new string) error {
 	log.Default().Printf("[AWS S3] Set folder name to %s", new)
 	return nil
 }
+
+func FolderLink(prefix string) (string, error) {
+	region, err := util.LoadEnvVar("AWS_REGION")
+	if err != nil {
+		return "", err
+	}
+	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", region, bucket, region, prefix)
+
+	return url, nil
+}

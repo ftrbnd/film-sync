@@ -83,6 +83,7 @@ func dailyHandler(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		newLinks, err := google.CheckEmail()
 		if err != nil {
+			discord.SendErrorMessage(err)
 			return
 		}
 
@@ -91,6 +92,7 @@ func dailyHandler(w http.ResponseWriter, r *http.Request) {
 		if len(newLinks) > 0 {
 			err = startJob(newLinks)
 			if err != nil {
+				discord.SendErrorMessage(err)
 			}
 		}
 	}()

@@ -223,3 +223,26 @@ func SendSuccessMessage(s3Folder string, driveFolderID string, message string) e
 
 	return nil
 }
+
+func SendErrorMessage(e error) error {
+	channel, err := createDMChannel()
+	if err != nil {
+		return err
+	}
+
+	_, err = bot.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+		Embeds: []*discordgo.MessageEmbed{
+			{
+				Title:       "Upload failed",
+				Description: e.Error(),
+				Color:       0xDF0000,
+				URL:         "https://fly.io/apps/film-sync/monitoring",
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

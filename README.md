@@ -151,6 +151,13 @@ Once all photos from a zip file have been successfully uploaded, the Discord bot
 
 [![Success Screenshot][success-screenshot]][success-screenshot]
 
+### Folder Renaming
+
+The success message has a button that opens a modal prompting the user to enter a new folder name
+
+[![Modal Screenshot][modal-screenshot]][modal-screenshot]
+[![Rename Screenshot][rename-screenshot]][rename-screenshot]
+
 <!-- CONTRIBUTING -->
 
 ## Contributing
@@ -195,4 +202,6 @@ Project Link: [https://github.com/ftrbnd/film-sync](https://github.com/ftrbnd/fi
 [Fly-url]: https://fly.io
 [portfolio-url]: https://giosalad.dev
 [auth-screenshot]: https://i.imgur.com/3OiA1Mx.png
-[success-screenshot]: https://i.imgur.com/36YvcAW.png
+[success-screenshot]: https://i.imgur.com/C5f2ZnU.png
+[modal-screenshot]: https://i.imgur.com/w7U67Lo.png
+[rename-screenshot]: https://i.imgur.com/e0CeEFk.png

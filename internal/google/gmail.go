@@ -112,8 +112,6 @@ func CheckEmail() ([]string, error) {
 			database.AddEmail(newEmail)
 
 			newLinks = append(newLinks, link)
-		} else {
-			log.Default().Printf("Email #%s already exists in database", email.Id)
 		}
 	}
 

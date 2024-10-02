@@ -59,7 +59,6 @@ func SetFolderName(old string, new string) error {
 		return err
 	}
 
-	newFolder := new + "/"
 	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
 	if err != nil {
 		return err
@@ -75,7 +74,7 @@ func SetFolderName(old string, new string) error {
 
 	for _, object := range objects.Contents {
 		oldKey := *object.Key
-		newKey := strings.Replace(oldKey, old, newFolder, 1)
+		newKey := strings.Replace(oldKey, old, new, 1)
 
 		_, err := client.CopyObject(context.TODO(), &s3.CopyObjectInput{
 			Bucket:     aws.String(bucket),

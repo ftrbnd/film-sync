@@ -15,14 +15,14 @@ import (
 )
 
 func Upload(from string, zip string, count int) (string, string, string, error) {
-	folder := strings.ReplaceAll(filepath.Base(zip), ".zip", "")
+	folderName := strings.ReplaceAll(filepath.Base(zip), ".zip", "")
 
 	_, err := os.ReadDir(from)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to read directory: %v", err)
 	}
 
-	driveFolderID, err := google.CreateFolder(from)
+	driveFolderID, err := google.CreateFolder(folderName)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -52,7 +52,7 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 		fileType := http.DetectContentType(buffer)
 
 		if format == ".png" {
-			err = myaws.Upload(fileBytes, fileType, size, from, path)
+			err = myaws.Upload(fileBytes, fileType, size, folderName, path)
 		} else if format == ".tif" {
 			err = google.Upload(fileBytes, path, driveFolderID)
 		}
@@ -63,7 +63,7 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 		return "", "", "", err
 	}
 
-	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folder, count)
+	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folderName, count)
 
 	err = os.RemoveAll(from)
 	if err != nil {
@@ -76,5 +76,5 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 
 	}
 
-	return folder, driveFolderID, message, nil
+	return folderName, driveFolderID, message, nil
 }

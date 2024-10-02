@@ -45,7 +45,7 @@ func startJob(links []string) error {
 }
 
 func scheduleJob() error {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(24 * time.Hour)
 	done := make(chan bool)
 
 	go func() {

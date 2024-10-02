@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"github.com/ftrbnd/film-sync/internal/database"
+	"github.com/ftrbnd/film-sync/internal/discord"
+	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
@@ -41,6 +43,59 @@ func authHandler(w http.ResponseWriter, r *http.Request, acr chan bool) {
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")
 }
 
+func startJob(links []string) error {
+	dst := "output"
+	format := "tif"
+
+	for _, link := range links {
+		z, err := files.DownloadFrom(link)
+		if err != nil {
+			return fmt.Errorf("failed to download from link: %v", err)
+		}
+
+		files.Unzip(z, dst, format)
+		c, err := files.ConvertToPNG(format, dst)
+		if err != nil {
+			return fmt.Errorf("failed to convert to png: %v", err)
+		}
+
+		s3Folder, driveFolderID, message, err := files.Upload(dst, z, c)
+		if err != nil {
+			return fmt.Errorf("failed to upload files: %v", err)
+		}
+
+		err = discord.SendSuccessMessage(s3Folder, driveFolderID, message)
+		if err != nil {
+			return fmt.Errorf("failed to send discord success message: %v", err)
+		}
+	}
+
+	log.Default().Println("Finished running daily job!")
+	return nil
+}
+
+func dailyHandler(w http.ResponseWriter, r *http.Request) {
+	log.Default().Println("Received /daily request")
+	// TODO: authorize request
+	w.WriteHeader(http.StatusAccepted)
+	fmt.Fprintln(w, "Request accepted for processing")
+
+	go func() {
+		newLinks, err := google.CheckEmail()
+		if err != nil {
+			return
+		}
+
+		log.Default().Printf("Found %d new links", len(newLinks))
+
+		if len(newLinks) > 0 {
+			err = startJob(newLinks)
+			if err != nil {
+			}
+		}
+	}()
+}
+
 func newRouter(acr chan bool) http.Handler {
 	mux := http.NewServeMux()
 
@@ -48,6 +103,7 @@ func newRouter(acr chan bool) http.Handler {
 	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
 		authHandler(w, r, acr)
 	})
+	mux.HandleFunc("/daily", dailyHandler)
 
 	return mux
 }

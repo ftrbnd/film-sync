@@ -1,77 +1,13 @@
 package app
 
 import (
-	"fmt"
-	"log"
-	"time"
-
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
-	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"golang.org/x/oauth2"
 )
-
-func startJob(links []string) error {
-	dst := "output"
-	format := "tif"
-
-	for _, link := range links {
-		z, err := files.DownloadFrom(link)
-		if err != nil {
-			return fmt.Errorf("failed to download from link: %v", err)
-		}
-
-		files.Unzip(z, dst, format)
-		c, err := files.ConvertToPNG(format, dst)
-		if err != nil {
-			return fmt.Errorf("failed to convert to png: %v", err)
-		}
-
-		s3Folder, driveFolderID, message, err := files.Upload(dst, z, c)
-		if err != nil {
-			return fmt.Errorf("failed to upload files: %v", err)
-		}
-
-		err = discord.SendSuccessMessage(s3Folder, driveFolderID, message)
-		if err != nil {
-			return fmt.Errorf("failed to send discord success message: %v", err)
-		}
-	}
-
-	return nil
-}
-
-func scheduleJob() error {
-	ticker := time.NewTicker(24 * time.Hour)
-	done := make(chan bool)
-
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				newLinks, err := google.CheckEmail()
-				if err != nil {
-					return
-				}
-				log.Default().Printf("Found %d new links", len(newLinks))
-
-				if len(newLinks) > 0 {
-					err = startJob(newLinks)
-					if err != nil {
-						panic(err)
-					}
-				}
-			}
-		}
-	}()
-
-	return nil
-}
 
 func Bootstrap() error {
 	err := util.LoadEnv()
@@ -107,10 +43,6 @@ func Bootstrap() error {
 
 	google.GmailService(authCodeReceived)
 	google.DriveService(authCodeReceived)
-	err = scheduleJob()
-	if err != nil {
-		return err
-	}
 
 	err = server.Listen(authCodeReceived)
 	if err != nil {

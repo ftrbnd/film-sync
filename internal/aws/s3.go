@@ -53,41 +53,33 @@ func Upload(bytes *bytes.Reader, fileType string, size int64, dst string, path s
 	return nil
 }
 
-func SetFolderName(url string, name string) error {
+func SetFolderName(old string, new string) error {
 	client, err := getClient()
 	if err != nil {
 		return err
 	}
-	newFolder := name + "/"
 
-	awsRegion, err := util.LoadEnvVar("AWS_REGION")
+	newFolder := new + "/"
+	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
 	if err != nil {
 		return err
 	}
 
-	a, _ := strings.CutPrefix(url, fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/", awsRegion))
-	a = strings.ReplaceAll(a, fmt.Sprintf("?region=%s&prefix", awsRegion), "")
-	bucketAndFolder := strings.Split(a, "=")
-	bucketName := bucketAndFolder[0]
-	oldFolder := bucketAndFolder[1]
-
-	params := &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucketName),
-		Prefix: aws.String(oldFolder),
-	}
-
-	objects, err := client.ListObjectsV2(context.TODO(), params)
+	objects, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(old),
+	})
 	if err != nil {
 		return err
 	}
 
 	for _, object := range objects.Contents {
 		oldKey := *object.Key
-		newKey := strings.Replace(oldKey, oldFolder, newFolder, 1)
+		newKey := strings.Replace(oldKey, old, newFolder, 1)
 
 		_, err := client.CopyObject(context.TODO(), &s3.CopyObjectInput{
-			Bucket:     aws.String(bucketName),
-			CopySource: aws.String(bucketName + "/" + oldKey),
+			Bucket:     aws.String(bucket),
+			CopySource: aws.String(bucket + "/" + oldKey),
 			Key:        aws.String(newKey),
 		})
 		if err != nil {
@@ -97,7 +89,7 @@ func SetFolderName(url string, name string) error {
 
 	for _, object := range objects.Contents {
 		_, err := client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
-			Bucket: aws.String(bucketName),
+			Bucket: aws.String(bucket),
 			Key:    object.Key,
 		})
 		if err != nil {
@@ -105,6 +97,6 @@ func SetFolderName(url string, name string) error {
 		}
 	}
 
-	log.Default().Printf("[AWS S3] Set folder name to %s", name)
+	log.Default().Printf("[AWS S3] Set folder name to %s", new)
 	return nil
 }

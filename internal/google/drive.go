@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
-	"strings"
 
 	"github.com/ftrbnd/film-sync/internal/util"
 	"google.golang.org/api/drive/v3"
@@ -46,9 +45,7 @@ func Upload(bytes *bytes.Reader, filePath string, folderID string) error {
 	return nil
 }
 
-func SetFolderName(url string, name string) error {
-	folderID, _ := strings.CutPrefix(url, "https://drive.google.com/drive/u/0/folders/")
-
+func SetFolderName(folderID string, name string) error {
 	_, err := driveSrv.Files.Update(folderID, &drive.File{
 		Name: name,
 	}).Do()

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -20,23 +21,23 @@ func startJob(links []string) error {
 	for _, link := range links {
 		z, err := files.DownloadFrom(link)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to download from link: %v", err)
 		}
 
 		files.Unzip(z, dst, format)
 		c, err := files.ConvertToPNG(format, dst)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to convert to png: %v", err)
 		}
 
-		s3Url, driveUrl, message, err := files.Upload(dst, z, c)
+		s3Folder, driveFolderID, message, err := files.Upload(dst, z, c)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to upload files: %v", err)
 		}
 
-		err = discord.SendSuccessMessage(s3Url, driveUrl, message)
+		err = discord.SendSuccessMessage(s3Folder, driveFolderID, message)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to send discord success message: %v", err)
 		}
 	}
 

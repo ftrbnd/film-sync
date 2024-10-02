@@ -12,7 +12,6 @@ import (
 
 	myaws "github.com/ftrbnd/film-sync/internal/aws"
 	"github.com/ftrbnd/film-sync/internal/google"
-	"github.com/ftrbnd/film-sync/internal/util"
 )
 
 func Upload(from string, zip string, count int) (string, string, string, error) {
@@ -23,7 +22,7 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 		return "", "", "", fmt.Errorf("failed to read directory: %v", err)
 	}
 
-	folderID, err := google.CreateFolder(from)
+	driveFolderID, err := google.CreateFolder(from)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -55,7 +54,7 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 		if format == ".png" {
 			err = myaws.Upload(fileBytes, fileType, size, from, path)
 		} else if format == ".tif" {
-			err = google.Upload(fileBytes, path, folderID)
+			err = google.Upload(fileBytes, path, driveFolderID)
 		}
 
 		return err
@@ -63,18 +62,6 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 	if err != nil {
 		return "", "", "", err
 	}
-
-	region, err := util.LoadEnvVar("AWS_REGION")
-	if err != nil {
-		return "", "", "", err
-	}
-	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
-	if err != nil {
-		return "", "", "", err
-	}
-
-	s3Url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", region, bucket, region, folder)
-	driveUrl := fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", folderID)
 
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folder, count)
 
@@ -89,5 +76,5 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 
 	}
 
-	return s3Url, driveUrl, message, nil
+	return folder, driveFolderID, message, nil
 }

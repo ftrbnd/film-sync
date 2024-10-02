@@ -74,9 +74,9 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 		folderName := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 
 		after, _ := strings.CutPrefix(data.CustomID, "folder_name_modal_")
-		urls := strings.Split(after, ",")
-		aws.SetFolderName(urls[0], folderName)
-		google.SetFolderName(urls[1], folderName)
+		ids := strings.Split(after, ",")
+		go aws.SetFolderName(ids[0], folderName)
+		go google.SetFolderName(ids[1], folderName)
 
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -143,11 +143,23 @@ func SendAuthMessage(authURL string) error {
 	return nil
 }
 
-func SendSuccessMessage(s3Url string, driveUrl string, message string) error {
+func SendSuccessMessage(s3Folder string, driveFolderID string, message string) error {
 	channel, err := createDMChannel()
 	if err != nil {
 		return err
 	}
+
+	region, err := util.LoadEnvVar("AWS_REGION")
+	if err != nil {
+		return err
+	}
+	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
+	if err != nil {
+		return err
+	}
+
+	s3Url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", region, bucket, region, s3Folder)
+	driveUrl := fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", driveFolderID)
 
 	_, err = bot.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
@@ -174,7 +186,7 @@ func SendSuccessMessage(s3Url string, driveUrl string, message string) error {
 					discordgo.Button{
 						Label:    "Set folder name",
 						Style:    discordgo.PrimaryButton,
-						CustomID: fmt.Sprintf("%s,%s", s3Url, driveUrl),
+						CustomID: fmt.Sprintf("%s,%s", s3Folder, driveFolderID),
 						Emoji: &discordgo.ComponentEmoji{
 							Name: "📁",
 						},

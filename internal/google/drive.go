@@ -51,7 +51,6 @@ func SetFolderName(folderID string, name string) error {
 	}).Do()
 	if err != nil {
 		return err
-
 	}
 
 	log.Default().Printf("[Google Drive] Set folder name to %s", name)

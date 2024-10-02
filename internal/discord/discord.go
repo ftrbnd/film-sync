@@ -78,6 +78,9 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 		go aws.SetFolderName(ids[0], folderName)
 		go google.SetFolderName(ids[1], folderName)
 
+		s3Url, _ := aws.FolderLink(folderName)
+		driveUrl := google.FolderLink(ids[1])
+
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -86,6 +89,31 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 						Title:       "Folder name set!",
 						Description: folderName,
 						Color:       0x32FF25,
+						URL:         "https://fly.io/apps/film-sync/monitoring",
+					},
+				},
+				Components: []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label: "Drive",
+								Style: discordgo.LinkButton,
+								URL:   driveUrl,
+							},
+							discordgo.Button{
+								Label: "S3",
+								Style: discordgo.LinkButton,
+								URL:   s3Url,
+							},
+							discordgo.Button{
+								Label:    "Rename folder",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("%s,%s", folderName, ids[1]),
+								Emoji: &discordgo.ComponentEmoji{
+									Name: "📁",
+								},
+							},
+						},
 					},
 				},
 			},

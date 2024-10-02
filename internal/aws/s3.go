@@ -71,6 +71,10 @@ func SetFolderName(old string, new string) error {
 	if err != nil {
 		return err
 	}
+	if len(objects.Contents) == 0 {
+		log.Default().Printf("[AWS S3] %s folder has no contents", old)
+		return nil
+	}
 
 	for _, object := range objects.Contents {
 		oldKey := *object.Key
@@ -110,7 +114,8 @@ func FolderLink(prefix string) (string, error) {
 		return "", err
 	}
 
-	url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", region, bucket, region, prefix)
+	p := strings.ReplaceAll(prefix, " ", "+")
+	url := fmt.Sprintf("https://%s.console.aws.amazon.com/s3/buckets/%s?region=%s&prefix=%s/", region, bucket, region, p)
 
 	return url, nil
 }

@@ -56,7 +56,7 @@ Welcome to my first Go project!
 
 When I get my film photos developed by my local photo studio, they email me the scans via a WeTransfer link. I have been manually opening the link, extracting the photos from the zip file, and uploading the .TIF files to my Google Drive. After all this, I still don't have shareable photos since most apps/sites don't support the .TIF format. So, this Go application does the following for me:
 
-- Checks for new emails from the photo studio every 24 hours
+- Checks for new emails from the photo studio every 24 hours via Qstash request on the /daily route
 - Visits the link in the email and downloads the .zip file
 - Extracts the .TIF photos from the .zip file, and converts them into .PNGs
 - Uploads the .TIF images to Google Drive for storage, and .PNG images to my AWS S3 bucket for sharing, such as on on my [personal website :)][portfolio-url]
@@ -71,6 +71,7 @@ When I get my film photos developed by my local photo studio, they email me the 
 - [![MongoDB][MongoDB]][MongoDB-url]
 - [![AWSs3][AWSs3]][AWSs3-url]
 - [![Fly][Fly]][Fly-url]
+- [![Qstash][Qstash]][Qstash-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -85,6 +86,7 @@ When I get my film photos developed by my local photo studio, they email me the 
 - Client credentials from [Google Cloud][Gcloud-url]
 - Bot token from [Discord][Discord-url]
 - Access keys from [AWS S3][AWSs3-url]
+- Signing keys from [Qstash][Qstash-url]
 
 ### Installation
 
@@ -128,7 +130,11 @@ Create a `.env` file at the root and fill out the values:
   AWS_BUCKET_NAME="" # ex: my-film-photos
   AWS_REGION="" # ex: us-west-1
 
+  QSTASH_CURRENT_SIGNING_KEY=""
+  QSTASH_NEXT_SIGNING_KEY=""
+
   PORT=3001
+  PROD="false"
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -200,6 +206,8 @@ Project Link: [https://github.com/ftrbnd/film-sync](https://github.com/ftrbnd/fi
 [AWSs3-url]: https://aws.amazon.com/s3/
 [Fly]: https://img.shields.io/badge/fly.io-24175B?style=for-the-badge&logo=flydotio&logoColor=white
 [Fly-url]: https://fly.io
+[Qstash]: https://img.shields.io/badge/qstash-00E9A3?style=for-the-badge&logo=upstash&logoColor=white
+[Qstash-url]: https://upstash.com/docs/qstash/quickstarts/fly-io/go
 [portfolio-url]: https://giosalad.dev
 [auth-screenshot]: https://i.imgur.com/3OiA1Mx.png
 [success-screenshot]: https://i.imgur.com/C5f2ZnU.png

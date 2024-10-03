@@ -53,9 +53,10 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 
 		if format == ".png" {
 			err = myaws.Upload(fileBytes, fileType, size, folderName, path)
-		} else if format == ".tif" {
-			err = google.Upload(fileBytes, path, driveFolderID)
 		}
+		// } else if format == ".tif" {
+		// 	err = google.Upload(fileBytes, path, driveFolderID)
+		// }
 
 		return err
 	})
@@ -73,7 +74,6 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 	err = os.Remove(zip)
 	if err != nil {
 		log.Default().Printf("Failed to remove zip file: %v", err)
-
 	}
 
 	return folderName, driveFolderID, message, nil

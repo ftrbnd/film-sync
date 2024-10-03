@@ -53,10 +53,9 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 
 		if format == ".png" {
 			err = myaws.Upload(fileBytes, fileType, size, folderName, path)
+		} else if format == ".tif" {
+			err = google.Upload(fileBytes, path, driveFolderID)
 		}
-		// } else if format == ".tif" {
-		// 	err = google.Upload(fileBytes, path, driveFolderID)
-		// }
 
 		return err
 	})

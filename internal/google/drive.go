@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ftrbnd/film-sync/internal/util"
 	"google.golang.org/api/drive/v3"
@@ -82,12 +83,14 @@ func DownloadFolder(folderID string, dst string) error {
 		return nil
 	}
 
-	log.Default().Printf("%d FILES FOUND", len(fileList.Files))
-	log.Default().Println("FILE NAME:", fileList.Files[0].Name)
+	log.Default().Printf("%d files found", len(fileList.Files))
 
 	// Download each file in the folder
-	for _, file := range fileList.Files {
-		if file.MimeType == "application/vnd.google-apps.folder" {
+	for i, file := range fileList.Files {
+		log.Default().Printf("File #%d: %s", i, file.Name)
+
+		// In my case, my primary parent folder only has folders with .tif images
+		if !strings.HasSuffix(file.Name, ".tif") {
 			// If it's a folder, call downloadFolder recursively
 			subFolderPath := filepath.Join(dst, file.Name)
 			fmt.Printf("Entering folder: %s\n", subFolderPath)

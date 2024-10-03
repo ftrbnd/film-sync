@@ -96,7 +96,7 @@ func visit(path string, d fs.DirEntry, err error, format string, c *int) error {
 
 	src, err := imgconv.Open(path)
 	if err != nil {
-		return fmt.Errorf("failed to open image: %v", err)
+		return fmt.Errorf("failed to open image from %s: %v", path, err)
 	}
 
 	pngPath := strings.Replace(path, "tif", "png", 1)

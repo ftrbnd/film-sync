@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ftrbnd/film-sync/internal/discord"
@@ -14,6 +15,7 @@ import (
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"github.com/golang-jwt/jwt/v4"
+	"golang.org/x/oauth2"
 )
 
 func startJob(links []string) error {
@@ -43,7 +45,7 @@ func startJob(links []string) error {
 		}
 	}
 
-	log.Default().Println("Finished running daily job!")
+	log.Default().Println("[HTTP] Finished running daily job!")
 	return nil
 }
 
@@ -107,7 +109,7 @@ func dailyHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = verify(body, tokenString, currentSigningKey)
 	if err != nil {
-		fmt.Printf("Unable to verify signature with current signing key: %v", err)
+		log.Default().Printf("[HTTP] Unable to verify signature with current signing key: %v", err)
 		err = verify(body, tokenString, nextSigningKey)
 	}
 
@@ -123,10 +125,18 @@ func dailyHandler(w http.ResponseWriter, r *http.Request) {
 		newLinks, err := google.CheckEmail()
 		if err != nil {
 			discord.SendErrorMessage(err)
+
+			if strings.Contains(err.Error(), "service hasn't been initialized") {
+				config, _ := google.Config()
+				authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+				discord.SendAuthMessage(authURL)
+				log.Default().Println("[Google] Sent auth request to user via Discord")
+			}
+
 			return
 		}
 
-		log.Default().Printf("Found %d new links", len(newLinks))
+		log.Default().Printf("[HTTP] Found %d new links", len(newLinks))
 
 		if len(newLinks) > 0 {
 			err = startJob(newLinks)

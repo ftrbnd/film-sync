@@ -13,6 +13,11 @@ import (
 )
 
 func getEmailsBySender(sender string) ([]*gmail.Message, error) {
+	err := checkGmailService()
+	if err != nil {
+		return nil, err
+	}
+
 	q := fmt.Sprintf("from:%s", sender)
 
 	res, err := gmailSrv.Users.Messages.List("me").Q(q).Do()
@@ -24,6 +29,11 @@ func getEmailsBySender(sender string) ([]*gmail.Message, error) {
 }
 
 func filterEmailsByMetadata(messages []*gmail.Message, fieldName string, fieldValue string) ([]*gmail.Message, error) {
+	err := checkGmailService()
+	if err != nil {
+		return nil, err
+	}
+
 	var emails []*gmail.Message
 
 	for _, msg := range messages {
@@ -45,7 +55,12 @@ func filterEmailsByMetadata(messages []*gmail.Message, fieldName string, fieldVa
 	return emails, nil
 }
 
-func GetDownloadLink(message *gmail.Message) (string, error) {
+func getDownloadLink(message *gmail.Message) (string, error) {
+	err := checkGmailService()
+	if err != nil {
+		return "", err
+	}
+
 	msg, err := gmailSrv.Users.Messages.Get("me", message.Id).Format("full").Do()
 	if err != nil {
 		return "", fmt.Errorf("unable to retrieve message: %v", err)
@@ -63,7 +78,12 @@ func GetDownloadLink(message *gmail.Message) (string, error) {
 	return link, nil
 }
 
-func FetchEmails() ([]*gmail.Message, error) {
+func fetchEmails() ([]*gmail.Message, error) {
+	err := checkGmailService()
+	if err != nil {
+		return nil, err
+	}
+
 	fromEmail, err := util.LoadEnvVar("FROM_EMAIL")
 	if err != nil {
 		return nil, err
@@ -88,7 +108,12 @@ func FetchEmails() ([]*gmail.Message, error) {
 func CheckEmail() ([]string, error) {
 	log.Default().Println("[Google] Checking email...")
 
-	emails, err := FetchEmails()
+	err := checkGmailService()
+	if err != nil {
+		return nil, err
+	}
+
+	emails, err := fetchEmails()
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +127,7 @@ func CheckEmail() ([]string, error) {
 	for _, email := range emails {
 		exists := database.EmailExists(saved, email)
 		if !exists {
-			link, err := GetDownloadLink(email)
+			link, err := getDownloadLink(email)
 			if err != nil {
 				return nil, err
 			}
@@ -116,4 +141,12 @@ func CheckEmail() ([]string, error) {
 	}
 
 	return newLinks, nil
+}
+
+func checkGmailService() error {
+	if gmailSrv == nil {
+		return fmt.Errorf("gmail service hasn't been initialized")
+	}
+
+	return nil
 }

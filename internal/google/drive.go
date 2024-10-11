@@ -11,6 +11,11 @@ import (
 )
 
 func CreateFolder(name string) (string, error) {
+	err := checkDriveService()
+	if err != nil {
+		return "", err
+	}
+
 	parent, err := util.LoadEnvVar("DRIVE_FOLDER_ID")
 	if err != nil {
 		return "", err
@@ -29,9 +34,14 @@ func CreateFolder(name string) (string, error) {
 }
 
 func Upload(bytes *bytes.Reader, filePath string, folderID string) error {
+	err := checkDriveService()
+	if err != nil {
+		return err
+	}
+
 	name := filepath.Base(filePath)
 
-	_, err := driveSrv.Files.Create(&drive.File{
+	_, err = driveSrv.Files.Create(&drive.File{
 		Parents:  []string{folderID},
 		Name:     name,
 		MimeType: "image/tiff",
@@ -46,7 +56,12 @@ func Upload(bytes *bytes.Reader, filePath string, folderID string) error {
 }
 
 func SetFolderName(folderID string, name string) error {
-	_, err := driveSrv.Files.Update(folderID, &drive.File{
+	err := checkDriveService()
+	if err != nil {
+		return err
+	}
+
+	_, err = driveSrv.Files.Update(folderID, &drive.File{
 		Name: name,
 	}).Do()
 	if err != nil {
@@ -59,4 +74,12 @@ func SetFolderName(folderID string, name string) error {
 
 func FolderLink(folderID string) string {
 	return fmt.Sprintf("https://drive.google.com/drive/u/0/folders/%s", folderID)
+}
+
+func checkDriveService() error {
+	if driveSrv == nil {
+		return fmt.Errorf("drive service hasn't been initialized")
+	}
+
+	return nil
 }

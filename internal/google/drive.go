@@ -41,7 +41,7 @@ func Upload(bytes *bytes.Reader, filePath string, folderID string) error {
 
 	}
 
-	log.Default().Printf("[Google Drive] Uploaded %s!\n", name)
+	log.Default().Printf("[Google] Uploaded %s to Drive!\n", name)
 	return nil
 }
 
@@ -53,7 +53,7 @@ func SetFolderName(folderID string, name string) error {
 		return err
 	}
 
-	log.Default().Printf("[Google Drive] Set folder name to %s", name)
+	log.Default().Printf("[Google] Set Drive folder name to %s", name)
 	return nil
 }
 

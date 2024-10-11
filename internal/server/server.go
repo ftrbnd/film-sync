@@ -15,7 +15,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello film-sync!")
 }
 
-func authHandler(w http.ResponseWriter, r *http.Request, acr chan bool) {
+func authHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 	if code == "" || state == "" {
@@ -35,30 +35,27 @@ func authHandler(w http.ResponseWriter, r *http.Request, acr chan bool) {
 	}
 
 	database.SaveToken(tok)
-	acr <- true
-	acr <- true
+	google.StartServices()
 
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")
 }
 
-func newRouter(acr chan bool) http.Handler {
+func newRouter() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", indexHandler)
-	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
-		authHandler(w, r, acr)
-	})
+	mux.HandleFunc("/auth", authHandler)
 	mux.HandleFunc("/daily", dailyHandler)
 
 	return mux
 }
 
-func Listen(acr chan bool) error {
+func Listen() error {
 	port, err := util.LoadEnvVar("PORT")
 	if err != nil {
 		return err
 	}
-	router := newRouter(acr)
+	router := newRouter()
 
 	log.Default().Printf("[HTTP] Server listening on port %s", port)
 

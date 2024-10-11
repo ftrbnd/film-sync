@@ -102,36 +102,35 @@ func Config() (*oauth2.Config, error) {
 func getClient(config *oauth2.Config) (*http.Client, error) {
 	tok, err := database.GetToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("no oauth token in db: %v", err)
 	}
 
 	return config.Client(context.Background(), tok), nil
 }
 
-func GmailService(acr chan bool) error {
-	ctx := context.Background()
-
-	config, err := Config()
-	if err != nil {
-		return err
-	}
-
-	<-acr // block until we have an auth token in db
-	client, err := getClient(config)
-	if err != nil {
-		return err
-	}
-
-	gmailSrv, err = gmail.NewService(ctx, option.WithHTTPClient(client))
+func gmailService(ctx context.Context, client *http.Client) error {
+	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return fmt.Errorf("unable to retrieve Gmail client: %v", err)
 	}
 
-	log.Default().Println("[Gmail] Successfully retrieved service")
+	gmailSrv = srv
+	log.Default().Println("[Google] Successfully retrieved Gmail service")
 	return nil
 }
 
-func DriveService(acr chan bool) error {
+func driveService(ctx context.Context, client *http.Client) error {
+	srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return fmt.Errorf("unable to retrieve Google Drive client: %v", err)
+	}
+
+	driveSrv = srv
+	log.Default().Println("[Google] Successfully retrieved Drive service")
+	return nil
+}
+
+func StartServices() error {
 	ctx := context.Background()
 
 	config, err := Config()
@@ -139,17 +138,20 @@ func DriveService(acr chan bool) error {
 		return err
 	}
 
-	<-acr // block until we have an auth token in db
 	client, err := getClient(config)
 	if err != nil {
 		return err
 	}
 
-	driveSrv, err = drive.NewService(ctx, option.WithHTTPClient(client))
+	err = gmailService(ctx, client)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve Google Drive client: %v", err)
+		return err
 	}
 
-	log.Default().Println("[Google Drive] Successfully retrieved service")
+	err = driveService(ctx, client)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

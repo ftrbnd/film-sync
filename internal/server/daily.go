@@ -85,7 +85,7 @@ func verify(body []byte, tokenString, signingKey string) error {
 }
 
 func dailyHandler(w http.ResponseWriter, r *http.Request) {
-	log.Default().Println("Received /daily request")
+	log.Default().Println("[HTTP] Received /daily request")
 
 	currentSigningKey, err := util.LoadEnvVar("QSTASH_CURRENT_SIGNING_KEY")
 	if err != nil {

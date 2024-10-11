@@ -167,7 +167,6 @@ func SendAuthMessage(authURL string) error {
 		return err
 	}
 
-	log.Default().Println("Waiting for user to authenticate...")
 	return nil
 }
 

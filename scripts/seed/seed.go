@@ -4,6 +4,7 @@ import (
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/google"
+	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
@@ -25,8 +26,12 @@ func main() {
 	}
 	defer discord.CloseSession()
 
-	authCodeReceived := make(chan bool)
-	err = google.GmailService(authCodeReceived)
+	err = server.Listen()
+	if err != nil {
+		panic(err)
+	}
+
+	err = google.StartServices()
 	if err != nil {
 		panic(err)
 	}
@@ -35,6 +40,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	<-authCodeReceived
 }

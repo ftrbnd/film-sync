@@ -86,7 +86,7 @@ func FetchEmails() ([]*gmail.Message, error) {
 }
 
 func CheckEmail() ([]string, error) {
-	log.Default().Println("Checking email...")
+	log.Default().Println("[Google] Checking email...")
 
 	emails, err := FetchEmails()
 	if err != nil {

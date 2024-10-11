@@ -39,7 +39,7 @@ func AddEmail(e Email) (*mongo.InsertOneResult, error) {
 		return nil, fmt.Errorf("unable to insert document: %v", err)
 	}
 
-	log.Default().Printf("Inserted email %s to database", e.EmailID)
+	log.Default().Printf("[MongoDB] Inserted email %s", e.EmailID)
 	return res, nil
 }
 
@@ -64,7 +64,7 @@ func SaveToken(tok *oauth2.Token) (*mongo.InsertOneResult, error) {
 		return nil, fmt.Errorf("unable to save token: %v", err)
 	}
 
-	log.Default().Println("Saved token to database")
+	log.Default().Println("[MongoDB] Saved oauth token to database")
 	return res, nil
 }
 

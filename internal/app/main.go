@@ -1,6 +1,8 @@
 package app
 
 import (
+	"log"
+
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/google"
@@ -27,24 +29,16 @@ func Bootstrap() error {
 	}
 	defer discord.CloseSession()
 
-	authCodeReceived := make(chan bool)
-
-	count, err := database.TokenCount()
-	if err != nil || count == 0 {
+	err = google.StartServices()
+	if err != nil {
 		config, _ := google.Config()
 		authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 		discord.SendAuthMessage(authURL)
-	} else {
-		go func() {
-			authCodeReceived <- true
-			authCodeReceived <- true
-		}()
+		log.Default().Println("[Google] Sent auth request to user via Discord")
+
 	}
 
-	google.GmailService(authCodeReceived)
-	google.DriveService(authCodeReceived)
-
-	err = server.Listen(authCodeReceived)
+	err = server.Listen()
 	if err != nil {
 		return err
 	}

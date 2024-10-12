@@ -143,6 +143,7 @@ func CheckEmail() ([]string, error) {
 	return newLinks, nil
 }
 
+// TODO: figure out how to auto-refresh token
 func checkGmailService() error {
 	if gmailSrv == nil {
 		return fmt.Errorf("gmail service hasn't been initialized")

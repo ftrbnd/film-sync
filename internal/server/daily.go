@@ -126,7 +126,8 @@ func dailyHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			discord.SendErrorMessage(err)
 
-			if strings.Contains(err.Error(), "service hasn't been initialized") {
+			authErr := strings.Contains(err.Error(), "service hasn't been initialized") || strings.Contains(err.Error(), "token expired")
+			if authErr {
 				config, _ := google.Config()
 				authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 				discord.SendAuthMessage(authURL)

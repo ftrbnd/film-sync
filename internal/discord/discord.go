@@ -232,7 +232,7 @@ func SendErrorMessage(e error) error {
 	_, err = bot.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
 			{
-				Title:       "Upload failed",
+				Title:       "Film Sync failed",
 				Description: e.Error(),
 				Color:       0xDF0000,
 				URL:         "https://fly.io/apps/film-sync/monitoring",

@@ -68,7 +68,9 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 				},
 			},
 		})
-		util.CheckError("Failed to send modal", err)
+		if err != nil {
+			log.Default().Printf("Failed to send modal: %v", err)
+		}
 	case discordgo.InteractionModalSubmit:
 		data := i.ModalSubmitData()
 		folderName := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
@@ -118,7 +120,9 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 				},
 			},
 		})
-		util.CheckError("Failed to respond to modal submission", err)
+		if err != nil {
+			log.Default().Printf("Failed to respond to modal submission: %v", err)
+		}
 	}
 }
 

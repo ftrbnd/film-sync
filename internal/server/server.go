@@ -58,6 +58,7 @@ func Listen() error {
 	router := newRouter()
 
 	log.Default().Printf("[HTTP] Server listening on port %s", port)
+	log.Default().Println("[Film Sync] All services ready") // server is the last service to start since it blocks
 
 	err = http.ListenAndServe(":"+port, router)
 	if err != nil {

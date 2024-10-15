@@ -89,33 +89,36 @@ func verify(body []byte, tokenString, signingKey string) error {
 func dailyHandler(w http.ResponseWriter, r *http.Request) {
 	log.Default().Println("[HTTP] Received /daily request")
 
-	currentSigningKey, err := util.LoadEnvVar("QSTASH_CURRENT_SIGNING_KEY")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	nextSigningKey, err := util.LoadEnvVar("QSTASH_NEXT_SIGNING_KEY")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	tokenString := r.Header.Get("Upstash-Signature")
+	env, _ := util.LoadEnvVar("GO_ENV")
+	if env != "development" {
+		currentSigningKey, err := util.LoadEnvVar("QSTASH_CURRENT_SIGNING_KEY")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		nextSigningKey, err := util.LoadEnvVar("QSTASH_NEXT_SIGNING_KEY")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tokenString := r.Header.Get("Upstash-Signature")
 
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-	err = verify(body, tokenString, currentSigningKey)
-	if err != nil {
-		log.Default().Printf("[HTTP] Unable to verify signature with current signing key: %v", err)
-		err = verify(body, tokenString, nextSigningKey)
-	}
+		err = verify(body, tokenString, currentSigningKey)
+		if err != nil {
+			log.Default().Printf("[HTTP] Unable to verify signature with current signing key: %v", err)
+			err = verify(body, tokenString, nextSigningKey)
+		}
 
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusAccepted)

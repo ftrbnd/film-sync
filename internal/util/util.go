@@ -23,7 +23,7 @@ func LoadEnv() error {
 
 func LoadEnvVar(key string) (string, error) {
 	v, exists := os.LookupEnv(key)
-	if !exists {
+	if !exists && key != "GO_ENV" {
 		return "", fmt.Errorf("%s environment variable not found", key)
 	}
 

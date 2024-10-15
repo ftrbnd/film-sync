@@ -40,7 +40,7 @@ func Bootstrap() error {
 
 	err = server.Listen()
 	if err != nil {
-		return err
+		log.Default().Printf("error starting server: %v", err)
 	}
 
 	return nil

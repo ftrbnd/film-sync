@@ -1,6 +1,7 @@
 package files
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,17 +12,27 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 )
 
+var browser *rod.Browser
+
+func StartBrowser() {
+	path, _ := launcher.LookPath()
+	u := launcher.New().Bin(path).Leakless(false).Headless(true).NoSandbox(true).Set("disable-gpu").RemoteDebuggingPort(9222).MustLaunch()
+	browser = rod.New().ControlURL(u).MustConnect()
+
+	log.Default().Println("[Files] Browser ready")
+}
+
 func DownloadFrom(link string) (string, error) {
 	log.Default().Printf("Downloading from %s...", link)
+
+	if browser == nil {
+		return "", errors.New("browser has not been started")
+	}
 
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("failed to get working directory: %v", err)
 	}
-
-	u := launcher.New().Leakless(false).MustLaunch()
-	browser := rod.New().ControlURL(u).MustConnect()
-	defer browser.MustClose()
 
 	page := browser.MustPage(link)
 

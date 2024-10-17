@@ -5,6 +5,7 @@ import (
 
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
+	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/ftrbnd/film-sync/internal/util"
@@ -37,6 +38,8 @@ func Bootstrap() error {
 		log.Default().Println("[Google] Sent auth request to user via Discord")
 
 	}
+
+	files.StartBrowser()
 
 	err = server.Listen()
 	if err != nil {

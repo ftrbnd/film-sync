@@ -39,7 +39,10 @@ func Bootstrap() error {
 
 	}
 
-	files.StartBrowser()
+	err = files.StartBrowser()
+	if err != nil {
+		return err
+	}
 
 	err = server.Listen()
 	if err != nil {

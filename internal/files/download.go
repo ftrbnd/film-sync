@@ -16,16 +16,13 @@ import (
 var browser *rod.Browser
 
 func StartBrowser() error {
-	goEnv, err := util.LoadEnvVar("GO_ENV")
-	if err != nil {
-		return err
-	}
-
 	var path string
-	if goEnv == "production" {
-		path = "/app/.chrome-for-testing/chrome-linux64/chrome"
-	} else {
+
+	p, err := util.LoadEnvVar("BROWSER_PATH")
+	if err != nil {
 		path, _ = launcher.LookPath()
+	} else {
+		path = p
 	}
 
 	u, err := launcher.New().Bin(path).Leakless(false).Headless(true).NoSandbox(true).Set("disable-gpu").RemoteDebuggingPort(9222).Launch()

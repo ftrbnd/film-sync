@@ -38,22 +38,6 @@ func CredentialsFromEnv() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	projectID, err := util.LoadEnvVar("PROJECT_ID")
-	if err != nil {
-		return nil, err
-	}
-	authURI, err := util.LoadEnvVar("AUTH_URI")
-	if err != nil {
-		return nil, err
-	}
-	tokenURI, err := util.LoadEnvVar("TOKEN_URI")
-	if err != nil {
-		return nil, err
-	}
-	authProviderX509CertURL, err := util.LoadEnvVar("AUTH_PROVIDER_X509_CERT_URL")
-	if err != nil {
-		return nil, err
-	}
 	clientSecret, err := util.LoadEnvVar("CLIENT_SECRET")
 	if err != nil {
 		return nil, err
@@ -66,10 +50,10 @@ func CredentialsFromEnv() ([]byte, error) {
 	credentials := Credentials{
 		Installed: InstalledBody{
 			ClientID:                clientID,
-			ProjectID:               projectID,
-			AuthURI:                 authURI,
-			TokenURI:                tokenURI,
-			AuthProviderX509CertURL: authProviderX509CertURL,
+			ProjectID:               "film-sync",
+			AuthURI:                 "https://accounts.google.com/o/oauth2/auth",
+			TokenURI:                "https://oauth2.googleapis.com/token",
+			AuthProviderX509CertURL: "https://www.googleapis.com/oauth2/v1/certs",
 			ClientSecret:            clientSecret,
 			RedirectURIs:            []string{redirectURI},
 		},

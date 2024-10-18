@@ -228,6 +228,8 @@ func SendSuccessMessage(s3Folder string, driveFolderID string, message string) e
 }
 
 func SendErrorMessage(e error) error {
+	log.Default().Println(e)
+
 	channel, err := createDMChannel()
 	if err != nil {
 		return err

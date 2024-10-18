@@ -1,11 +1,13 @@
 package files
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/ftrbnd/film-sync/internal/util"
 	"github.com/go-rod/rod"
@@ -42,17 +44,19 @@ func StartBrowser() error {
 }
 
 func findAndClickButton(page *rod.Page, jsRegex string) error {
-	button, err := page.ElementR("button", jsRegex)
-	if err != nil {
-		return fmt.Errorf("failed to find %s button: %v", jsRegex, err)
+	err := rod.Try(func() {
+		page.MustWaitDOMStable()
+
+		button := page.Timeout(5*time.Second).MustElementR("button", jsRegex)
+		button.Timeout(5 * time.Second).MustClick()
+	})
+	if errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("timed out finding '%s' button: %v", jsRegex, err)
+	} else if err != nil {
+		return fmt.Errorf("failed to find and click '%s' button: %v", jsRegex, err)
 	}
 
-	err = button.Click(proto.InputMouseButtonLeft, 1)
-	if err != nil {
-		return fmt.Errorf("failed to click on %s button: %v", jsRegex, err)
-	}
-
-	log.Default().Printf("Clicked on '%s'", jsRegex)
+	log.Default().Printf("Found and clicked '%s' button", jsRegex)
 	return nil
 }
 
@@ -72,17 +76,17 @@ func DownloadFrom(link string) (string, error) {
 		URL: link,
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to visit url: %v", err)
+		return "", fmt.Errorf("failed to visit page: %v", err)
 	}
 
+	// sometimes the page will directly go to the Download view, so disregard the next 2 errors
 	err = findAndClickButton(page, "Accept All")
 	if err != nil {
-		return "", err
+		log.Default().Println("'Accept All' button was not found")
 	}
-
 	err = findAndClickButton(page, "I agree")
 	if err != nil {
-		return "", err
+		log.Default().Println("'I agree' button was not found")
 	}
 
 	page.MustWaitDOMStable()

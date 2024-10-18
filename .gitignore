@@ -23,6 +23,7 @@ token.json
 *.zip
 output
 scripts/test
+*.png
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

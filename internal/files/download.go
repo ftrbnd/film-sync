@@ -61,7 +61,7 @@ func findAndClickButton(page *rod.Page, jsRegex string) error {
 }
 
 func DownloadFrom(link string) (string, error) {
-	log.Default().Printf("Downloading from %s...", link)
+	log.Default().Println("Starting download process...", link)
 
 	if browser == nil {
 		return "", errors.New("browser has not been started")
@@ -72,11 +72,16 @@ func DownloadFrom(link string) (string, error) {
 		return "", fmt.Errorf("failed to get working directory: %v", err)
 	}
 
-	page, err := browser.Page(proto.TargetCreateTarget{
-		URL: link,
+	page := browser.MustPage()
+	err = rod.Try(func() {
+		page.MustWaitDOMStable()
+		page.Timeout(10 * time.Second).MustNavigate(link)
+		log.Default().Println("Successfully navigated to page")
 	})
-	if err != nil {
-		return "", fmt.Errorf("failed to visit page: %v", err)
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "", fmt.Errorf("timed out in navigating to link: %v", err)
+	} else if err != nil {
+		return "", fmt.Errorf("failed to navigate to link: %v", err)
 	}
 
 	// sometimes the page will directly go to the Download view, so disregard the next 2 errors

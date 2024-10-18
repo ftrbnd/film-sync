@@ -41,6 +41,21 @@ func StartBrowser() error {
 	return nil
 }
 
+func findAndClickButton(page *rod.Page, jsRegex string) error {
+	button, err := page.ElementR("button", jsRegex)
+	if err != nil {
+		return fmt.Errorf("failed to find %s button: %v", jsRegex, err)
+	}
+
+	err = button.Click(proto.InputMouseButtonLeft, 1)
+	if err != nil {
+		return fmt.Errorf("failed to click on %s button: %v", jsRegex, err)
+	}
+
+	log.Default().Printf("Clicked on '%s'", jsRegex)
+	return nil
+}
+
 func DownloadFrom(link string) (string, error) {
 	log.Default().Printf("Downloading from %s...", link)
 
@@ -60,27 +75,15 @@ func DownloadFrom(link string) (string, error) {
 		return "", fmt.Errorf("failed to visit url: %v", err)
 	}
 
-	button, err := page.ElementR("button", "Accept All")
+	err = findAndClickButton(page, "Accept All")
 	if err != nil {
-		return "", fmt.Errorf("failed to find Accept All button: %v", err)
+		return "", err
 	}
 
-	err = button.Click(proto.InputMouseButtonLeft, 1)
+	err = findAndClickButton(page, "I agree")
 	if err != nil {
-		return "", fmt.Errorf("failed to click on Accept All button: %v", err)
+		return "", err
 	}
-	log.Default().Println("Clicked on 'Accept All'")
-
-	button, err = page.ElementR("button", "I agree")
-	if err != nil {
-		return "", fmt.Errorf("failed to find I Agree button: %v", err)
-	}
-
-	err = button.Click(proto.InputMouseButtonLeft, 1)
-	if err != nil {
-		return "", fmt.Errorf("failed to click on I Agree button: %v", err)
-	}
-	log.Default().Println("Clicked on 'I agree'")
 
 	page.MustWaitDOMStable()
 
@@ -95,16 +98,10 @@ func DownloadFrom(link string) (string, error) {
 		return e.State == proto.PageDownloadProgressStateCompleted
 	})()
 
-	button, err = page.ElementR("button", "Download")
+	err = findAndClickButton(page, "Download")
 	if err != nil {
-		return "", fmt.Errorf("failed to find Download button: %v", err)
+		return "", err
 	}
-
-	err = button.Click(proto.InputMouseButtonLeft, 1)
-	if err != nil {
-		return "", fmt.Errorf("failed to click on Download button: %v", err)
-	}
-	log.Default().Println("Clicked on 'Download'")
 
 	res := wait()
 

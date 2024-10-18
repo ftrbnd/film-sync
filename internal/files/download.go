@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ftrbnd/film-sync/internal/util"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -15,11 +16,23 @@ import (
 var browser *rod.Browser
 
 func StartBrowser() error {
-	path, _ := launcher.LookPath()
+	goEnv, err := util.LoadEnvVar("GO_ENV")
+	if err != nil {
+		return err
+	}
+
+	var path string
+	if goEnv == "production" {
+		path = "/app/.chrome-for-testing/chrome-linux64/chrome"
+	} else {
+		path, _ = launcher.LookPath()
+	}
+
 	u, err := launcher.New().Bin(path).Leakless(false).Headless(true).NoSandbox(true).Set("disable-gpu").RemoteDebuggingPort(9222).Launch()
 	if err != nil {
 		return fmt.Errorf("failed to launch browser: %v", err)
 	}
+
 	browser = rod.New().ControlURL(u)
 
 	err = browser.Connect()
@@ -27,7 +40,7 @@ func StartBrowser() error {
 		return fmt.Errorf("failed to connect to browser: %v", err)
 	}
 
-	log.Default().Println("[Files] Browser ready")
+	log.Default().Printf("[Files] Browser ready at %s", path)
 	return nil
 }
 

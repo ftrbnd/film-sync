@@ -13,6 +13,8 @@ import (
 
 var bot *discordgo.Session
 
+var dashboardURL = "https://dashboard.heroku.com/apps/film-sync"
+
 func OpenSession() error {
 	token, err := util.LoadEnvVar("DISCORD_TOKEN")
 	if err != nil {
@@ -91,7 +93,7 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 						Title:       "Folder name set!",
 						Description: folderName,
 						Color:       0x32FF25,
-						URL:         "https://fly.io/apps/film-sync/monitoring",
+						URL:         dashboardURL,
 					},
 				},
 				Components: []discordgo.MessageComponent{
@@ -152,7 +154,7 @@ func SendAuthMessage(authURL string) error {
 				Title:       "Authentication required!",
 				Description: "Visit the link to connect with Gmail and Google Drive",
 				Color:       0xFFFB25,
-				URL:         "https://fly.io/apps/film-sync/monitoring",
+				URL:         dashboardURL,
 			},
 		},
 		Components: []discordgo.MessageComponent{
@@ -192,7 +194,7 @@ func SendSuccessMessage(s3Folder string, driveFolderID string, message string) e
 				Title:       "Upload successful!",
 				Description: message,
 				Color:       0x32FF25,
-				URL:         "https://fly.io/apps/film-sync/monitoring",
+				URL:         dashboardURL,
 			},
 		},
 		Components: []discordgo.MessageComponent{
@@ -241,7 +243,7 @@ func SendErrorMessage(e error) error {
 				Title:       "Film Sync failed",
 				Description: e.Error(),
 				Color:       0xDF0000,
-				URL:         "https://fly.io/apps/film-sync/monitoring",
+				URL:         dashboardURL,
 			},
 		},
 	})

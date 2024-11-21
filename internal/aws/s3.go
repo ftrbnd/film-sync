@@ -33,19 +33,20 @@ func StartClient() error {
 	return nil
 }
 
-func Upload(bytes *bytes.Reader, fileType string, size int64, dst string, path string) error {
+func Upload(bytes *bytes.Reader, fileType string, size int64, dst string, path string) (string, error) {
 	if client == nil {
-		return errors.New("AWS client hasn't been initialized")
+		return "", errors.New("AWS client hasn't been initialized")
 	}
 
 	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
 	if err != nil {
-		return err
+		return "", err
 	}
 
+	key := fmt.Sprintf("%s/%s", dst, filepath.Base(path))
 	params := &s3.PutObjectInput{
 		Bucket:        aws.String(bucket),
-		Key:           aws.String(fmt.Sprintf("%s/%s", dst, filepath.Base(path))),
+		Key:           aws.String(key),
 		Body:          bytes,
 		ContentLength: aws.Int64(size),
 		ContentType:   aws.String(fileType),
@@ -53,11 +54,11 @@ func Upload(bytes *bytes.Reader, fileType string, size int64, dst string, path s
 
 	_, err = client.PutObject(context.TODO(), params)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	log.Default().Printf("[AWS S3] Uploaded %s!\n", path)
-	return nil
+	return key, nil
 }
 
 func SetFolderName(old string, new string) error {

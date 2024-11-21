@@ -14,19 +14,20 @@ import (
 	"github.com/ftrbnd/film-sync/internal/google"
 )
 
-func Upload(from string, zip string, count int) (string, string, string, error) {
+func Upload(from string, zip string, count int) (string, string, []string, string, error) {
 	folderName := strings.ReplaceAll(filepath.Base(zip), ".zip", "")
 
 	_, err := os.ReadDir(from)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to read directory: %v", err)
+		return "", "", nil, "", fmt.Errorf("failed to read directory: %v", err)
 	}
 
 	driveFolderID, err := google.CreateFolder(folderName)
 	if err != nil {
-		return "", "", "", err
+		return "", "", nil, "", err
 	}
 
+	var keys []string
 	err = filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -52,7 +53,9 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 		fileType := http.DetectContentType(buffer)
 
 		if format == ".png" {
-			err = myaws.Upload(fileBytes, fileType, size, folderName, path)
+			key, e := myaws.Upload(fileBytes, fileType, size, folderName, path)
+			err = e
+			keys = append(keys, key)
 		} else if format == ".tif" {
 			err = google.Upload(fileBytes, path, driveFolderID)
 		}
@@ -60,12 +63,16 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 		return err
 	})
 	if err != nil {
-		return "", "", "", err
+		return "", "", nil, "", err
 	}
 
+	cleanUp(from, zip)
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folderName, count)
+	return folderName, driveFolderID, keys, message, nil
+}
 
-	err = os.RemoveAll(from)
+func cleanUp(from string, zip string) {
+	err := os.RemoveAll(from)
 	if err != nil {
 		log.Default().Printf("Failed to remove directory: %v", err)
 	}
@@ -73,8 +80,5 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 	err = os.Remove(zip)
 	if err != nil {
 		log.Default().Printf("Failed to remove zip file: %v", err)
-
 	}
-
-	return folderName, driveFolderID, message, nil
 }

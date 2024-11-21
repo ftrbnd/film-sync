@@ -43,6 +43,21 @@ func AddEmail(e Email) (*mongo.InsertOneResult, error) {
 	return res, nil
 }
 
+func AddImageKeysToEmail(downloadLink string, keys []string) (*mongo.UpdateResult, error) {
+	collection := GetCollection("emails")
+
+	filter := bson.M{"downloadLink": downloadLink}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "imageKeys", Value: keys}}}}
+
+	res, err := collection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Default().Printf("[MongoDB] Saved %d image keys to document", len(keys))
+	return res, nil
+}
+
 func EmailExists(savedEmails []Email, fetchedEmail *gmail.Message) bool {
 	exists := slices.ContainsFunc(savedEmails, func(saved Email) bool {
 		return saved.EmailID == fetchedEmail.Id

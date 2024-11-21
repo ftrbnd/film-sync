@@ -3,6 +3,7 @@ package aws
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -14,21 +15,27 @@ import (
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
-func getClient() (*s3.Client, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-1"))
+var client *s3.Client
+
+func StartClient() error {
+	region, err := util.LoadEnvVar("AWS_REGION")
 	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config %v", err)
+		return err
 	}
 
-	client := s3.NewFromConfig(cfg)
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+	if err != nil {
+		return fmt.Errorf("failed to load AWS config %v", err)
+	}
 
-	return client, nil
+	client = s3.NewFromConfig(cfg)
+	log.Default().Println("[AWS] Successfully started S3 client")
+	return nil
 }
 
 func Upload(bytes *bytes.Reader, fileType string, size int64, dst string, path string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
+	if client == nil {
+		return errors.New("AWS client hasn't been initialized")
 	}
 
 	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")
@@ -54,9 +61,8 @@ func Upload(bytes *bytes.Reader, fileType string, size int64, dst string, path s
 }
 
 func SetFolderName(old string, new string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
+	if client == nil {
+		return errors.New("AWS client hasn't been initialized")
 	}
 
 	bucket, err := util.LoadEnvVar("AWS_BUCKET_NAME")

@@ -40,7 +40,7 @@ func startJob(links []string) error {
 			return fmt.Errorf("failed to upload files: %v", err)
 		}
 
-		_, err = database.AddImageKeysToEmail(link, keys)
+		_, err = database.AddImageKeysToScan(link, s3Folder, keys)
 		if err != nil {
 			return fmt.Errorf("failed to add keys to document: %v", err)
 		}

@@ -43,10 +43,9 @@ func Upload(bytes *bytes.Reader, fileType string, size int64, dst string, path s
 		return "", err
 	}
 
-	key := fmt.Sprintf("%s/%s", dst, filepath.Base(path))
 	params := &s3.PutObjectInput{
 		Bucket:        aws.String(bucket),
-		Key:           aws.String(key),
+		Key:           aws.String(fmt.Sprintf("%s/%s", dst, filepath.Base(path))),
 		Body:          bytes,
 		ContentLength: aws.Int64(size),
 		ContentType:   aws.String(fileType),
@@ -58,7 +57,7 @@ func Upload(bytes *bytes.Reader, fileType string, size int64, dst string, path s
 	}
 
 	log.Default().Printf("[AWS S3] Uploaded %s!\n", path)
-	return key, nil
+	return filepath.Base(path), nil
 }
 
 func SetFolderName(old string, new string) error {

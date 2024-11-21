@@ -1,12 +1,11 @@
 package database
 
-import (
-	"go.mongodb.org/mongo-driver/v2/bson"
-)
+import "go.mongodb.org/mongo-driver/v2/bson"
 
-type Email struct {
+type FilmScan struct {
 	ID           bson.ObjectID `bson:"_id,omitempty"`
-	EmailID      string        `bson:"emailID,omitempty"`
-	DownloadLink string        `bson:"downloadLink,omitempty"`
-	ImageKeys    []string      `bson:"imageKeys,omitempty"`
+	EmailID      string        `bson:"email_id,omitempty"`
+	DownloadLink string        `bson:"download_link,omitempty"`
+	FolderName   string        `bson:"folder_name,omitempty"`
+	ImageKeys    []string      `bson:"image_keys,omitempty"`
 }

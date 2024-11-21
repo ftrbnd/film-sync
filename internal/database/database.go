@@ -12,6 +12,8 @@ import (
 )
 
 var db *mongo.Database
+var scanCollection *mongo.Collection
+var tokenCollection *mongo.Collection
 
 func Connect() error {
 	uri, err := util.LoadEnvVar("MONGODB_URI")
@@ -38,12 +40,11 @@ func Connect() error {
 		return err
 	}
 
+	scanCollection = db.Collection("scans")
+	tokenCollection = db.Collection("oauth_tokens")
+
 	log.Default().Printf("[MongoDB] Successfully connected to %s", dbName[0])
 	return nil
-}
-
-func GetCollection(col string) *mongo.Collection {
-	return db.Collection(col)
 }
 
 func Disconnect() error {

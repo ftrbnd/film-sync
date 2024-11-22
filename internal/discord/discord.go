@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/ftrbnd/film-sync/internal/aws"
+	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
@@ -79,13 +80,27 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 
 		after, _ := strings.CutPrefix(data.CustomID, "folder_name_modal_")
 		ids := strings.Split(after, ",")
-		go aws.SetFolderName(ids[0], folderName)
-		go google.SetFolderName(ids[1], folderName)
+
+		_, err := database.UpdateFolderName(ids[0], folderName)
+		if err != nil {
+			SendErrorMessage(err)
+			return
+		}
+		err = google.SetFolderName(ids[1], folderName)
+		if err != nil {
+			SendErrorMessage(err)
+			return
+		}
+		err = aws.SetFolderName(ids[0], folderName)
+		if err != nil {
+			SendErrorMessage(err)
+			return
+		}
 
 		s3Url, _ := aws.FolderLink(folderName)
 		driveUrl := google.FolderLink(ids[1])
 
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Embeds: []*discordgo.MessageEmbed{

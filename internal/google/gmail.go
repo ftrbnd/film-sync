@@ -117,7 +117,7 @@ func CheckEmail() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	saved, err := database.GetEmails()
+	saved, err := database.GetScans()
 	if err != nil {
 		return nil, err
 	}
@@ -132,9 +132,9 @@ func CheckEmail() ([]string, error) {
 				return nil, err
 			}
 
-			newEmail := database.Email{ID: bson.NewObjectID(), EmailID: email.Id, DownloadLink: link}
+			newEmail := database.FilmScan{ID: bson.NewObjectID(), EmailID: email.Id, DownloadLink: link}
 
-			database.AddEmail(newEmail)
+			database.AddScan(newEmail)
 
 			newLinks = append(newLinks, link)
 		}

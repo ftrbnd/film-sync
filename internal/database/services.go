@@ -12,17 +12,15 @@ import (
 	"google.golang.org/api/gmail/v1"
 )
 
-func GetEmails() ([]Email, error) {
-	collection := GetCollection("emails")
-
-	cur, err := collection.Find(context.Background(), bson.D{})
+func GetScans() ([]FilmScan, error) {
+	cur, err := scanCollection.Find(context.Background(), bson.D{})
 	if err != nil {
-		return nil, fmt.Errorf("unable to get all emails: %v", err)
+		return nil, fmt.Errorf("unable to get all film scans: %v", err)
 	}
 
 	defer cur.Close(context.Background())
 
-	var results []Email
+	var results []FilmScan
 	err = cur.All(context.Background(), &results)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode results: %v", err)
@@ -31,20 +29,65 @@ func GetEmails() ([]Email, error) {
 	return results, nil
 }
 
-func AddEmail(e Email) (*mongo.InsertOneResult, error) {
-	collection := GetCollection("emails")
+func GetOneScan(folder string) (*FilmScan, error) {
+	filter := bson.M{"folder_name": folder}
+	res := scanCollection.FindOne(context.Background(), filter)
+	if res.Err() != nil {
+		return nil, fmt.Errorf(`unable to get film scan "%s": %v`, folder, res.Err())
+	}
 
-	res, err := collection.InsertOne(context.TODO(), e)
+	scan := &FilmScan{}
+	err := res.Decode(scan)
+	if err != nil {
+		return nil, err
+	}
+
+	return scan, nil
+}
+
+func AddScan(f FilmScan) (*mongo.InsertOneResult, error) {
+	res, err := scanCollection.InsertOne(context.TODO(), f)
 	if err != nil {
 		return nil, fmt.Errorf("unable to insert document: %v", err)
 	}
 
-	log.Default().Printf("[MongoDB] Inserted email %s", e.EmailID)
+	log.Default().Printf("[MongoDB] Inserted new film scan from email: %s", f.EmailID)
 	return res, nil
 }
 
-func EmailExists(savedEmails []Email, fetchedEmail *gmail.Message) bool {
-	exists := slices.ContainsFunc(savedEmails, func(saved Email) bool {
+func UpdateFolderName(old string, new string) (*mongo.UpdateResult, error) {
+	filter := bson.M{"folder_name": old}
+	update := bson.D{{Key: "$set", Value: bson.D{
+		{Key: "folder_name", Value: new},
+	}}}
+
+	res, err := scanCollection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Default().Printf("[MongoDB] Updated folder name to %s", new)
+	return res, nil
+}
+
+func AddImageKeysToScan(downloadLink string, folder string, keys []string) (*mongo.UpdateResult, error) {
+	filter := bson.M{"download_link": downloadLink}
+	update := bson.D{{Key: "$set", Value: bson.D{
+		{Key: "image_keys", Value: keys},
+		{Key: "folder_name", Value: folder},
+	}}}
+
+	res, err := scanCollection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Default().Printf("[MongoDB] Saved %d image keys to document", len(keys))
+	return res, nil
+}
+
+func EmailExists(savedScans []FilmScan, fetchedEmail *gmail.Message) bool {
+	exists := slices.ContainsFunc(savedScans, func(saved FilmScan) bool {
 		return saved.EmailID == fetchedEmail.Id
 	})
 
@@ -52,14 +95,12 @@ func EmailExists(savedEmails []Email, fetchedEmail *gmail.Message) bool {
 }
 
 func SaveToken(tok *oauth2.Token) (*mongo.InsertOneResult, error) {
-	collection := GetCollection("oauth_tokens")
-
-	_, err := collection.DeleteMany(context.TODO(), bson.D{})
+	_, err := tokenCollection.DeleteMany(context.TODO(), bson.D{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to reset oauth_token collection: %v", err)
 	}
 
-	res, err := collection.InsertOne(context.TODO(), tok)
+	res, err := tokenCollection.InsertOne(context.TODO(), tok)
 	if err != nil {
 		return nil, fmt.Errorf("unable to save token: %v", err)
 	}
@@ -69,9 +110,7 @@ func SaveToken(tok *oauth2.Token) (*mongo.InsertOneResult, error) {
 }
 
 func GetToken() (*oauth2.Token, error) {
-	collection := GetCollection("oauth_tokens")
-
-	res := collection.FindOne(context.TODO(), bson.D{})
+	res := tokenCollection.FindOne(context.TODO(), bson.D{})
 
 	tok := &oauth2.Token{}
 	err := res.Decode(tok)
@@ -83,9 +122,7 @@ func GetToken() (*oauth2.Token, error) {
 }
 
 func TokenCount() (int64, error) {
-	collection := GetCollection("oauth_tokens")
-
-	count, err := collection.CountDocuments(context.TODO(), bson.D{})
+	count, err := tokenCollection.CountDocuments(context.TODO(), bson.D{})
 	if err != nil {
 		return 0, err
 	}

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/google"
@@ -34,9 +35,14 @@ func startJob(links []string) error {
 			return fmt.Errorf("failed to convert to png: %v", err)
 		}
 
-		s3Folder, driveFolderID, message, err := files.Upload(dst, z, c)
+		s3Folder, driveFolderID, keys, message, err := files.Upload(dst, z, c)
 		if err != nil {
 			return fmt.Errorf("failed to upload files: %v", err)
+		}
+
+		_, err = database.AddImageKeysToScan(link, s3Folder, keys)
+		if err != nil {
+			return fmt.Errorf("failed to add keys to document: %v", err)
 		}
 
 		err = discord.SendSuccessMessage(s3Folder, driveFolderID, message)

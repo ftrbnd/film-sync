@@ -3,6 +3,7 @@ package app
 import (
 	"log"
 
+	"github.com/ftrbnd/film-sync/internal/aws"
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/files"
@@ -29,6 +30,11 @@ func Bootstrap() error {
 		return err
 	}
 	defer discord.CloseSession()
+
+	err = aws.StartClient()
+	if err != nil {
+		return err
+	}
 
 	err = google.StartServices()
 	if err != nil {

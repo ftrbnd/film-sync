@@ -109,7 +109,7 @@ func DownloadFrom(link string) (string, error) {
 
 	err = findAndClickButton(page, "Download")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("'Download' button was not found: %v", err)
 	}
 
 	res := wait()

@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"log"
+	"strings"
 
 	"github.com/ftrbnd/film-sync/internal/util"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -11,12 +12,16 @@ import (
 )
 
 var db *mongo.Database
+var scanCollection *mongo.Collection
+var tokenCollection *mongo.Collection
 
 func Connect() error {
 	uri, err := util.LoadEnvVar("MONGODB_URI")
 	if err != nil {
 		return err
 	}
+	dbName := strings.Split(uri, "mongodb.net/")
+	dbName = strings.Split(dbName[1], "?")
 
 	// Use the SetServerAPIOptions() method to set the version of the Stable API on the client
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
@@ -29,18 +34,17 @@ func Connect() error {
 	}
 
 	// Send a ping to confirm a successful connection
-	db = client.Database("film-sync")
+	db = client.Database(dbName[0])
 	err = db.RunCommand(context.Background(), bson.D{{Key: "ping", Value: 1}}).Err()
 	if err != nil {
 		return err
 	}
 
-	log.Default().Println("[MongoDB] Successfully connected")
-	return nil
-}
+	scanCollection = db.Collection("scans")
+	tokenCollection = db.Collection("oauth_tokens")
 
-func GetCollection(col string) *mongo.Collection {
-	return db.Collection(col)
+	log.Default().Printf("[MongoDB] Successfully connected to %s", dbName[0])
+	return nil
 }
 
 func Disconnect() error {

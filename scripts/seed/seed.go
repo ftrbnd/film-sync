@@ -1,11 +1,14 @@
 package main
 
 import (
+	"log"
+
+	"github.com/ftrbnd/film-sync/internal/aws"
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/google"
-	"github.com/ftrbnd/film-sync/internal/server"
 	"github.com/ftrbnd/film-sync/internal/util"
+	"golang.org/x/oauth2"
 )
 
 func main() {
@@ -26,14 +29,17 @@ func main() {
 	}
 	defer discord.CloseSession()
 
-	err = server.Listen()
+	err = aws.StartClient()
 	if err != nil {
 		panic(err)
 	}
 
 	err = google.StartServices()
 	if err != nil {
-		panic(err)
+		config, _ := google.Config()
+		authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+		discord.SendAuthMessage(authURL)
+		log.Default().Println("[Google] Sent auth request to user via Discord")
 	}
 
 	_, err = google.CheckEmail()

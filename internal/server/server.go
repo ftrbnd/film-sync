@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -40,12 +41,37 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")
 }
 
+func scansHandler(w http.ResponseWriter, r *http.Request) {
+	log.Default().Println("Received /scans api request")
+
+	scans, err := database.GetScans()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+	}
+
+	json.NewEncoder(w).Encode(scans)
+}
+
+func scanHandler(w http.ResponseWriter, r *http.Request) {
+	folder := r.PathValue("folder")
+	log.Default().Printf("Received /scans/{%s} api request", folder)
+
+	scan, err := database.GetOneScan(folder)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+	}
+
+	json.NewEncoder(w).Encode(&scan)
+}
+
 func newRouter() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/auth", authHandler)
 	mux.HandleFunc("/daily", dailyHandler)
+	mux.HandleFunc("/api/scans", scansHandler)
+	mux.HandleFunc("/api/scans/{folder}", scanHandler)
 
 	return mux
 }

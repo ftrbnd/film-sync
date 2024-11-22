@@ -29,6 +29,22 @@ func GetScans() ([]FilmScan, error) {
 	return results, nil
 }
 
+func GetOneScan(folder string) (*FilmScan, error) {
+	filter := bson.M{"folder_name": folder}
+	res := scanCollection.FindOne(context.Background(), filter)
+	if res.Err() != nil {
+		return nil, fmt.Errorf(`unable to get film scan "%s": %v`, folder, res.Err())
+	}
+
+	scan := &FilmScan{}
+	err := res.Decode(scan)
+	if err != nil {
+		return nil, err
+	}
+
+	return scan, nil
+}
+
 func AddScan(f FilmScan) (*mongo.InsertOneResult, error) {
 	res, err := scanCollection.InsertOne(context.TODO(), f)
 	if err != nil {

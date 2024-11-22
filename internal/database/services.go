@@ -13,7 +13,8 @@ import (
 )
 
 func GetScans() ([]FilmScan, error) {
-	cur, err := scanCollection.Find(context.Background(), bson.D{})
+	filter := bson.M{"folder_name": bson.M{"$exists": true}}
+	cur, err := scanCollection.Find(context.Background(), filter)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get all film scans: %v", err)
 	}

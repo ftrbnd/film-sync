@@ -117,7 +117,7 @@ func CheckEmail() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	saved, err := database.GetScans()
+	saved, err := database.GetScans(false)
 	if err != nil {
 		return nil, err
 	}

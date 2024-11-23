@@ -44,7 +44,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 func scansHandler(w http.ResponseWriter, r *http.Request) {
 	log.Default().Println("Received /scans api request")
 
-	scans, err := database.GetScans()
+	scans, err := database.GetScans(true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 	}

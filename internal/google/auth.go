@@ -83,13 +83,13 @@ func Config() (*oauth2.Config, error) {
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config) (*http.Client, error) {
+func getClient(ctx context.Context, config *oauth2.Config) (*http.Client, error) {
 	tok, err := database.GetToken()
 	if err != nil {
 		return nil, fmt.Errorf("no oauth token in db: %v", err)
 	}
 
-	return config.Client(context.Background(), tok), nil
+	return config.Client(ctx, tok), nil
 }
 
 func gmailService(ctx context.Context, client *http.Client) error {
@@ -114,15 +114,13 @@ func driveService(ctx context.Context, client *http.Client) error {
 	return nil
 }
 
-func StartServices() error {
-	ctx := context.Background()
-
+func StartServices(ctx context.Context) error {
 	config, err := Config()
 	if err != nil {
 		return err
 	}
 
-	client, err := getClient(config)
+	client, err := getClient(ctx, config)
 	if err != nil {
 		return err
 	}

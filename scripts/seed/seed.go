@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/ftrbnd/film-sync/internal/aws"
@@ -34,7 +35,8 @@ func main() {
 		panic(err)
 	}
 
-	err = google.StartServices()
+	ctx := context.Background()
+	err = google.StartServices(ctx)
 	if err != nil {
 		config, _ := google.Config()
 		authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)

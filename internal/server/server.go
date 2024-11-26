@@ -12,6 +12,8 @@ import (
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
+var ctx context.Context
+
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello film-sync!")
 }
@@ -29,14 +31,14 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 	}
 
-	tok, err := config.Exchange(context.TODO(), code)
+	tok, err := config.Exchange(ctx, code)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	database.SaveToken(tok)
-	google.StartServices()
+	google.StartServices(ctx)
 
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")
 }
@@ -76,11 +78,13 @@ func newRouter() http.Handler {
 	return mux
 }
 
-func Listen() error {
+func Listen(c context.Context) error {
 	port, err := util.LoadEnvVar("PORT")
 	if err != nil {
 		return err
 	}
+
+	ctx = c
 	router := newRouter()
 
 	log.Default().Printf("[HTTP] Server listening on port %s", port)

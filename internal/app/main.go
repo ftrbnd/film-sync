@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"log"
 
 	"github.com/ftrbnd/film-sync/internal/aws"
@@ -36,7 +37,8 @@ func Bootstrap() error {
 		return err
 	}
 
-	err = google.StartServices()
+	ctx := context.Background()
+	err = google.StartServices(ctx)
 	if err != nil {
 		config, _ := google.Config()
 		authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
@@ -50,7 +52,7 @@ func Bootstrap() error {
 		return err
 	}
 
-	err = server.Listen()
+	err = server.Listen(ctx)
 	if err != nil {
 		log.Default().Printf("error starting server: %v", err)
 	}

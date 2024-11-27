@@ -10,9 +10,11 @@ import (
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
+	"golang.org/x/oauth2"
 )
 
 var ctx context.Context
+var googleConfig *oauth2.Config
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello film-sync!")
@@ -26,19 +28,14 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, err := google.Config()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-	}
-
-	tok, err := config.Exchange(ctx, code)
+	tok, err := googleConfig.Exchange(ctx, code, oauth2.AccessTypeOffline)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	database.SaveToken(tok)
-	google.StartServices(ctx)
+	google.StartServices(ctx, googleConfig)
 
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")
 }
@@ -78,13 +75,15 @@ func newRouter() http.Handler {
 	return mux
 }
 
-func Listen(c context.Context) error {
+func Listen(c context.Context, config *oauth2.Config) error {
 	port, err := util.LoadEnvVar("PORT")
 	if err != nil {
 		return err
 	}
 
 	ctx = c
+	googleConfig = config
+
 	router := newRouter()
 
 	log.Default().Printf("[HTTP] Server listening on port %s", port)

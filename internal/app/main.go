@@ -38,13 +38,16 @@ func Bootstrap() error {
 	}
 
 	ctx := context.Background()
-	err = google.StartServices(ctx)
+	config, err := google.Config()
 	if err != nil {
-		config, _ := google.Config()
+		return err
+	}
+
+	err = google.StartServices(ctx, config)
+	if err != nil {
 		authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 		discord.SendAuthMessage(authURL)
 		log.Default().Println("[Google] Sent auth request to user via Discord")
-
 	}
 
 	err = files.StartBrowser()
@@ -52,7 +55,7 @@ func Bootstrap() error {
 		return err
 	}
 
-	err = server.Listen(ctx)
+	err = server.Listen(ctx, config)
 	if err != nil {
 		log.Default().Printf("error starting server: %v", err)
 	}

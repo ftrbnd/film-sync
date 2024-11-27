@@ -36,9 +36,13 @@ func main() {
 	}
 
 	ctx := context.Background()
-	err = google.StartServices(ctx)
+	config, err := google.Config()
 	if err != nil {
-		config, _ := google.Config()
+		panic(err)
+	}
+
+	err = google.StartServices(ctx, config)
+	if err != nil {
 		authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 		discord.SendAuthMessage(authURL)
 		log.Default().Println("[Google] Sent auth request to user via Discord")

@@ -114,12 +114,7 @@ func driveService(ctx context.Context, client *http.Client) error {
 	return nil
 }
 
-func StartServices(ctx context.Context) error {
-	config, err := Config()
-	if err != nil {
-		return err
-	}
-
+func StartServices(ctx context.Context, config *oauth2.Config) error {
 	client, err := getClient(ctx, config)
 	if err != nil {
 		return err

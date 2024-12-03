@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	myaws "github.com/ftrbnd/film-sync/internal/aws"
+	"github.com/ftrbnd/film-sync/internal/cloudinary"
 	"github.com/ftrbnd/film-sync/internal/google"
 )
 
@@ -22,7 +21,7 @@ func Upload(from string, zip string, count int) (string, string, []string, strin
 		return "", "", nil, "", fmt.Errorf("failed to read directory: %v", err)
 	}
 
-	driveFolderID, err := google.CreateFolder(folderName)
+	driveFolderID, cldFolderName, err := createFolders(folderName)
 	if err != nil {
 		return "", "", nil, "", err
 	}
@@ -38,29 +37,33 @@ func Upload(from string, zip string, count int) (string, string, []string, strin
 			return nil
 		}
 
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		fileInfo, _ := file.Stat()
-		size := fileInfo.Size()
-		buffer := make([]byte, size) // read file content to buffer
-
-		file.Read(buffer)
-		fileBytes := bytes.NewReader(buffer)
-		fileType := http.DetectContentType(buffer)
-
 		if format == ".png" {
-			key, e := myaws.Upload(fileBytes, fileType, size, folderName, path)
-			err = e
+			key, err := cloudinary.UploadImage(cldFolderName, path)
+			if err != nil {
+				return err
+			}
 			keys = append(keys, key)
+
 		} else if format == ".tif" {
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			fileInfo, _ := file.Stat()
+			size := fileInfo.Size()
+			buffer := make([]byte, size) // read file content to buffer
+			file.Read(buffer)
+			fileBytes := bytes.NewReader(buffer)
+
 			err = google.Upload(fileBytes, path, driveFolderID)
+			if err != nil {
+				return err
+			}
 		}
 
-		return err
+		return nil
 	})
 	if err != nil {
 		return "", "", nil, "", err
@@ -69,6 +72,20 @@ func Upload(from string, zip string, count int) (string, string, []string, strin
 	cleanUp(from, zip)
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folderName, count)
 	return folderName, driveFolderID, keys, message, nil
+}
+
+func createFolders(name string) (string, string, error) {
+	driveFolderID, err := google.CreateFolder(name)
+	if err != nil {
+		return "", "", err
+	}
+
+	cldFolder, err := cloudinary.CreateFolder(name)
+	if err != nil {
+		return "", "", err
+	}
+
+	return driveFolderID, cldFolder.Name, nil
 }
 
 func cleanUp(from string, zip string) {

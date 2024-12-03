@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/ftrbnd/film-sync/internal/aws"
+	"github.com/ftrbnd/film-sync/internal/cloudinary"
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/files"
@@ -15,6 +16,7 @@ import (
 )
 
 func Bootstrap() error {
+
 	err := util.LoadEnv()
 	if err != nil {
 		return err
@@ -33,6 +35,10 @@ func Bootstrap() error {
 	defer discord.CloseSession()
 
 	err = aws.StartClient()
+	if err != nil {
+		return err
+	}
+	err = cloudinary.SetCredentials()
 	if err != nil {
 		return err
 	}

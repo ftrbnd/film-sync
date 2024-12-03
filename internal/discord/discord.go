@@ -6,9 +6,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/ftrbnd/film-sync/internal/cloudinary"
-	"github.com/ftrbnd/film-sync/internal/database"
-	"github.com/ftrbnd/film-sync/internal/google"
+	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
@@ -27,7 +25,12 @@ func OpenSession() error {
 		return fmt.Errorf("unable to start discord session: %v", err)
 	}
 
-	bot.AddHandler(handleInteractionCreate)
+	bot.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		err := handleInteractionCreate(s, i)
+		if err != nil {
+			SendErrorMessage(err)
+		}
+	})
 	bot.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Default().Printf("[Discord] %s is ready", s.State.User)
 	})
@@ -44,7 +47,7 @@ func CloseSession() error {
 	return bot.Close()
 }
 
-func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	switch i.Type {
 	case discordgo.InteractionMessageComponent:
 		buttonID := i.MessageComponentData().CustomID
@@ -72,7 +75,7 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 			},
 		})
 		if err != nil {
-			log.Default().Printf("Failed to send modal: %v", err)
+			return err
 		}
 	case discordgo.InteractionModalSubmit:
 		data := i.ModalSubmitData()
@@ -81,24 +84,15 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 		after, _ := strings.CutPrefix(data.CustomID, "folder_name_modal_")
 		ids := strings.Split(after, ",")
 
-		_, err := database.UpdateFolderName(ids[0], folderName)
+		err := files.SetFolderNames(ids[1], ids[0], folderName)
 		if err != nil {
-			SendErrorMessage(err)
-			return
-		}
-		err = google.SetFolderName(ids[1], folderName)
-		if err != nil {
-			SendErrorMessage(err)
-			return
-		}
-		err = cloudinary.SetFolderName(ids[0], folderName)
-		if err != nil {
-			SendErrorMessage(err)
-			return
+			return err
 		}
 
-		cldUrl, _ := cloudinary.FolderLink(folderName)
-		driveUrl := google.FolderLink(ids[1])
+		cldUrl, driveUrl, err := files.FolderLinks(folderName, ids[1])
+		if err != nil {
+			return err
+		}
 
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -138,9 +132,11 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 			},
 		})
 		if err != nil {
-			log.Default().Printf("Failed to respond to modal submission: %v", err)
+			return fmt.Errorf("failed to respond to modal submission: %v", err)
 		}
 	}
+
+	return nil
 }
 
 func createDMChannel() (*discordgo.Channel, error) {
@@ -197,11 +193,10 @@ func SendSuccessMessage(cldFolder string, driveFolderID string, message string) 
 		return err
 	}
 
-	cldUrl, err := cloudinary.FolderLink(cldFolder)
+	cldUrl, driveUrl, err := files.FolderLinks(cldFolder, driveFolderID)
 	if err != nil {
 		return err
 	}
-	driveUrl := google.FolderLink(driveFolderID)
 
 	_, err = bot.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{

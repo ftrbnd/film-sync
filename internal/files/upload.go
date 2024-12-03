@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ftrbnd/film-sync/internal/cloudinary"
+	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/google"
 )
 
@@ -72,6 +73,35 @@ func Upload(from string, zip string, count int) (string, string, []string, strin
 	cleanUp(from, zip)
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folderName, count)
 	return folderName, driveFolderID, keys, message, nil
+}
+
+func SetFolderNames(driveID string, old string, new string) error {
+	_, err := database.UpdateFolderName(old, new)
+	if err != nil {
+		return err
+	}
+
+	err = google.SetFolderName(driveID, new)
+	if err != nil {
+		return err
+	}
+
+	err = cloudinary.SetFolderName(old, new)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func FolderLinks(cldFolder string, driveFolderID string) (string, string, error) {
+	cldUrl, err := cloudinary.FolderLink(cldFolder)
+	if err != nil {
+		return "", "", err
+	}
+	driveUrl := google.FolderLink(driveFolderID)
+
+	return cldUrl, driveUrl, nil
 }
 
 func createFolders(name string) (string, string, error) {

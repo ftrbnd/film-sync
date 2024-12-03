@@ -2,6 +2,7 @@ package cloudinary
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"path/filepath"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2/api"
 	"github.com/cloudinary/cloudinary-go/v2/api/admin"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
+	"github.com/ftrbnd/film-sync/internal/util"
 )
 
 var cld *cloudinary.Cloudinary
@@ -52,4 +54,26 @@ func UploadImage(folder string, path string) (string, error) {
 
 	log.Default().Printf("[Cloudinary] Uploaded %s!\n", path)
 	return resp.PublicID, nil
+}
+
+func SetFolderName(old string, new string) error {
+	_, err := cld.Admin.RenameFolder(ctx, admin.RenameFolderParams{
+		FromPath: old,
+		ToPath:   new,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func FolderLink(name string) (string, error) {
+	id, err := util.LoadEnvVar("CLOUDINARY_ID")
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("https://console.cloudinary.com/pm/%s/media-explorer/%s", id, name), nil
 }

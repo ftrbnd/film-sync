@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/ftrbnd/film-sync/internal/aws"
+	"github.com/ftrbnd/film-sync/internal/cloudinary"
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
@@ -91,13 +91,13 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 			SendErrorMessage(err)
 			return
 		}
-		err = aws.SetFolderName(ids[0], folderName)
+		err = cloudinary.SetFolderName(ids[0], folderName)
 		if err != nil {
 			SendErrorMessage(err)
 			return
 		}
 
-		s3Url, _ := aws.FolderLink(folderName)
+		cldUrl, _ := cloudinary.FolderLink(folderName)
 		driveUrl := google.FolderLink(ids[1])
 
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -120,9 +120,9 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 								URL:   driveUrl,
 							},
 							discordgo.Button{
-								Label: "S3",
+								Label: "Cloudinary",
 								Style: discordgo.LinkButton,
-								URL:   s3Url,
+								URL:   cldUrl,
 							},
 							discordgo.Button{
 								Label:    "Rename folder",
@@ -191,13 +191,13 @@ func SendAuthMessage(authURL string) error {
 	return nil
 }
 
-func SendSuccessMessage(s3Folder string, driveFolderID string, message string) error {
+func SendSuccessMessage(cldFolder string, driveFolderID string, message string) error {
 	channel, err := createDMChannel()
 	if err != nil {
 		return err
 	}
 
-	s3Url, err := aws.FolderLink(s3Folder)
+	cldUrl, err := cloudinary.FolderLink(cldFolder)
 	if err != nil {
 		return err
 	}
@@ -221,14 +221,14 @@ func SendSuccessMessage(s3Folder string, driveFolderID string, message string) e
 						URL:   driveUrl,
 					},
 					discordgo.Button{
-						Label: "AWS S3",
+						Label: "Cloudinary",
 						Style: discordgo.LinkButton,
-						URL:   s3Url,
+						URL:   cldUrl,
 					},
 					discordgo.Button{
 						Label:    "Set folder name",
 						Style:    discordgo.PrimaryButton,
-						CustomID: fmt.Sprintf("%s,%s", s3Folder, driveFolderID),
+						CustomID: fmt.Sprintf("%s,%s", cldFolder, driveFolderID),
 						Emoji: &discordgo.ComponentEmoji{
 							Name: "📁",
 						},

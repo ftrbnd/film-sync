@@ -35,17 +35,17 @@ func startJob(links []string) error {
 			return fmt.Errorf("failed to convert to png: %v", err)
 		}
 
-		s3Folder, driveFolderID, keys, message, err := files.Upload(dst, z, c)
+		cldFolder, driveFolderID, keys, message, err := files.Upload(dst, z, c)
 		if err != nil {
 			return fmt.Errorf("failed to upload files: %v", err)
 		}
 
-		_, err = database.AddImageKeysToScan(link, s3Folder, keys)
+		_, err = database.AddImageKeysToScan(link, cldFolder, keys)
 		if err != nil {
 			return fmt.Errorf("failed to add keys to document: %v", err)
 		}
 
-		err = discord.SendSuccessMessage(s3Folder, driveFolderID, message)
+		err = discord.SendSuccessMessage(cldFolder, driveFolderID, message)
 		if err != nil {
 			return fmt.Errorf("failed to send discord success message: %v", err)
 		}

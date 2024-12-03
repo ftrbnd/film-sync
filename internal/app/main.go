@@ -10,7 +10,7 @@ import (
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/google"
-	"github.com/ftrbnd/film-sync/internal/server"
+	"github.com/ftrbnd/film-sync/internal/http"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"golang.org/x/oauth2"
 )
@@ -60,7 +60,7 @@ func Bootstrap() error {
 		return err
 	}
 
-	err = server.Listen(ctx, config)
+	err = http.Listen(ctx, config, runJob)
 	if err != nil {
 		log.Default().Printf("error starting server: %v", err)
 	}

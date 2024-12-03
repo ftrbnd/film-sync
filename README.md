@@ -59,7 +59,7 @@ When I get my film photos developed by my local photo studio, they email me the 
 - Checks for new emails from the photo studio every 24 hours via Qstash request on the /daily route
 - Visits the link in the email and downloads the .zip file
 - Extracts the .TIF photos from the .zip file, and converts them into .PNGs
-- Uploads the .TIF images to Google Drive for storage, and .PNG images to my AWS S3 bucket for sharing, such as on on my [personal website :)][portfolio-url]
+- Uploads the .TIF images to Google Drive for storage, and .PNG images to Cloudinary for sharing, such as on on my [personal website :)][portfolio-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -69,7 +69,7 @@ When I get my film photos developed by my local photo studio, they email me the 
 - [![Gmail][Gmail]][Gcloud-url]
 - [![Drive][Drive]][Gcloud-url]
 - [![MongoDB][MongoDB]][MongoDB-url]
-- [![AWSs3][AWSs3]][AWSs3-url]
+- [![Cloudinary][Cloudinary]][Cloudinary-url]
 - [![Heroku][Heroku]][Heroku-url]
 - [![Qstash][Qstash]][Qstash-url]
 
@@ -85,7 +85,7 @@ When I get my film photos developed by my local photo studio, they email me the 
 - Database uri from [MongoDB][MongoDB-url]
 - Client credentials from [Google Cloud][Gcloud-url]
 - Bot token from [Discord][Discord-url]
-- Access keys from [AWS S3][AWSs3-url]
+- Access keys from [Cloudinary][Cloudinary-url]
 - Signing keys from [Qstash][Qstash-url]
 
 ### Installation
@@ -125,10 +125,8 @@ Create a `.env` file at the root and fill out the values:
   DISCORD_USER_ID="" # User ID to send messages to
   DISCORD_TOKEN=""
 
-  AWS_ACCESS_KEY_ID=""
-  AWS_SECRET_ACCESS_KEY=""
-  AWS_BUCKET_NAME="" # ex: my-film-photos
-  AWS_REGION="" # ex: us-west-1
+  CLOUDINARY_URL=""
+  CLOUDINARY_ID=""
 
   QSTASH_CURRENT_SIGNING_KEY=""
   QSTASH_NEXT_SIGNING_KEY=""
@@ -202,8 +200,8 @@ Project Link: [https://github.com/ftrbnd/film-sync](https://github.com/ftrbnd/fi
 [MongoDB]: https://img.shields.io/badge/mongodb-47A248?style=for-the-badge&logo=mongodb&logoColor=white
 [MongoDB-url]: https://mongodb.com
 [Discord-url]: https://discord.com/developers/applications
-[AWSs3]: https://img.shields.io/badge/amazon%20s3-569A31?style=for-the-badge&logo=amazons3&logoColor=white
-[AWSs3-url]: https://aws.amazon.com/s3/
+[Cloudinary]: https://img.shields.io/badge/cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white
+[Cloudinary-url]: https://cloudinary.com/
 [Heroku]: https://img.shields.io/badge/heroku-430098?style=for-the-badge&logo=heroku&logoColor=white
 [Heroku-url]: https://heroku.com
 [Qstash]: https://img.shields.io/badge/qstash-00E9A3?style=for-the-badge&logo=upstash&logoColor=white

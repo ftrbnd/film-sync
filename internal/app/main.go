@@ -16,7 +16,6 @@ import (
 )
 
 func Bootstrap() error {
-
 	err := util.LoadEnv()
 	if err != nil {
 		return err

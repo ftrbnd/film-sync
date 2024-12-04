@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"path/filepath"
 
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/cloudinary/cloudinary-go/v2/api"
@@ -43,16 +42,14 @@ func CreateFolder(name string) (*admin.CreateFolderResult, error) {
 
 func UploadImage(folder string, path string) (string, error) {
 	resp, err := cld.Upload.Upload(ctx, path, uploader.UploadParams{
-		PublicID:       filepath.Base(path),
-		UniqueFilename: api.Bool(false),
-		Overwrite:      api.Bool(true),
-		AssetFolder:    folder,
+		UseFilename: api.Bool(true),
+		AssetFolder: folder,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	log.Default().Printf("[Cloudinary] Uploaded %s!\n", path)
+	log.Default().Printf("[Cloudinary] Uploaded %s!\n", resp.PublicID)
 	return resp.PublicID, nil
 }
 

@@ -75,22 +75,6 @@ func UpdateFolderName(old string, new string) (*mongo.UpdateResult, error) {
 	return res, nil
 }
 
-func AddImageKeysToScan(downloadLink string, folder string, keys []string) (*mongo.UpdateResult, error) {
-	filter := bson.M{"download_link": downloadLink}
-	update := bson.D{{Key: "$set", Value: bson.D{
-		{Key: "image_keys", Value: keys},
-		{Key: "folder_name", Value: folder},
-	}}}
-
-	res, err := scanCollection.UpdateOne(context.TODO(), filter, update)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Default().Printf("[MongoDB] Saved %d image keys to document", len(keys))
-	return res, nil
-}
-
 func EmailExists(savedScans []FilmScan, fetchedEmail *gmail.Message) bool {
 	exists := slices.ContainsFunc(savedScans, func(saved FilmScan) bool {
 		return saved.EmailID == fetchedEmail.Id

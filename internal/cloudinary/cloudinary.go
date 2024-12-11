@@ -40,17 +40,17 @@ func CreateFolder(name string) (*admin.CreateFolderResult, error) {
 	return result, nil
 }
 
-func UploadImage(folder string, path string) (string, error) {
+func UploadImage(folder string, path string) error {
 	resp, err := cld.Upload.Upload(ctx, path, uploader.UploadParams{
 		UseFilename: api.Bool(true),
 		AssetFolder: folder,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	log.Default().Printf("[Cloudinary] Uploaded %s!\n", resp.PublicID)
-	return resp.PublicID, nil
+	return nil
 }
 
 func SetFolderName(old string, new string) error {

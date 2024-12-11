@@ -14,20 +14,19 @@ import (
 	"github.com/ftrbnd/film-sync/internal/google"
 )
 
-func Upload(from string, zip string, count int) (string, string, []string, string, error) {
+func Upload(from string, zip string, count int) (string, string, string, error) {
 	folderName := strings.ReplaceAll(filepath.Base(zip), ".zip", "")
 
 	_, err := os.ReadDir(from)
 	if err != nil {
-		return "", "", nil, "", fmt.Errorf("failed to read directory: %v", err)
+		return "", "", "", fmt.Errorf("failed to read directory: %v", err)
 	}
 
 	driveFolderID, cldFolderName, err := createFolders(folderName)
 	if err != nil {
-		return "", "", nil, "", err
+		return "", "", "", err
 	}
 
-	var keys []string
 	err = filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -39,11 +38,10 @@ func Upload(from string, zip string, count int) (string, string, []string, strin
 		}
 
 		if format == ".png" {
-			key, err := cloudinary.UploadImage(cldFolderName, path)
+			err = cloudinary.UploadImage(cldFolderName, path)
 			if err != nil {
 				return err
 			}
-			keys = append(keys, key)
 
 		} else if format == ".tif" {
 			file, err := os.Open(path)
@@ -67,12 +65,12 @@ func Upload(from string, zip string, count int) (string, string, []string, strin
 		return nil
 	})
 	if err != nil {
-		return "", "", nil, "", err
+		return "", "", "", err
 	}
 
 	cleanUp(from, zip)
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folderName, count)
-	return folderName, driveFolderID, keys, message, nil
+	return folderName, driveFolderID, message, nil
 }
 
 func SetFolderNames(driveID string, old string, new string) error {

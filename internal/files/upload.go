@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/ftrbnd/film-sync/internal/cloudinary"
-	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/google"
 )
 
@@ -73,18 +72,13 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 	return folderName, driveFolderID, message, nil
 }
 
-func SetFolderNames(driveID string, old string, new string) error {
-	_, err := database.UpdateFolderName(old, new)
+func SetFolderNames(cldFolder string, driveFolderID string, new string) error {
+	err := cloudinary.SetFolderName(cldFolder, new)
 	if err != nil {
 		return err
 	}
 
-	err = google.SetFolderName(driveID, new)
-	if err != nil {
-		return err
-	}
-
-	err = cloudinary.SetFolderName(old, new)
+	err = google.SetFolderName(driveFolderID, new)
 	if err != nil {
 		return err
 	}

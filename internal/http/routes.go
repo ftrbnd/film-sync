@@ -8,11 +8,9 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/ftrbnd/film-sync/internal/database"
-	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"github.com/golang-jwt/jwt/v4"
@@ -68,7 +66,7 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(&scan)
 }
 
-func dailyHandler(w http.ResponseWriter, r *http.Request, f func(l []string) error) {
+func dailyHandler(w http.ResponseWriter, r *http.Request, runDailyJob func() error) {
 	log.Default().Println("[HTTP] Received /daily request")
 
 	env, _ := util.LoadEnvVar("GO_ENV")
@@ -106,31 +104,7 @@ func dailyHandler(w http.ResponseWriter, r *http.Request, f func(l []string) err
 	w.WriteHeader(http.StatusAccepted)
 	fmt.Fprintln(w, "Request accepted for processing")
 
-	go func() {
-		newLinks, err := google.CheckEmail()
-		if err != nil {
-			discord.SendErrorMessage(err)
-
-			authErr := strings.Contains(err.Error(), "service hasn't been initialized") || strings.Contains(err.Error(), "token expired")
-			if authErr {
-				config, _ := google.Config()
-				authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-				discord.SendAuthMessage(authURL)
-				log.Default().Println("[Google] Sent auth request to user via Discord")
-			}
-
-			return
-		}
-
-		log.Default().Printf("[HTTP] Found %d new links", len(newLinks))
-
-		if len(newLinks) > 0 {
-			err = f(newLinks)
-			if err != nil {
-				discord.SendErrorMessage(err)
-			}
-		}
-	}()
+	go runDailyJob()
 }
 
 func verify(body []byte, tokenString, signingKey string) error {

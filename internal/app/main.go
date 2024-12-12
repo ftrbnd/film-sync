@@ -55,7 +55,7 @@ func Bootstrap() error {
 		return err
 	}
 
-	err = http.Listen(ctx, config, runJob)
+	err = http.Listen(ctx, config, checkEmail)
 	if err != nil {
 		log.Default().Printf("error starting server: %v", err)
 	}

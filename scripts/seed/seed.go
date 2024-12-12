@@ -11,7 +11,7 @@ func main() {
 		panic(err)
 	}
 
-	_, err = google.CheckEmail()
+	_, err = google.CheckForNewEmails()
 	if err != nil {
 		panic(err)
 	}

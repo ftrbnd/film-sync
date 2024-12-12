@@ -13,7 +13,7 @@ import (
 var ctx context.Context
 var googleConfig *oauth2.Config
 
-func Listen(c context.Context, config *oauth2.Config, f func(l []string) error) error {
+func Listen(c context.Context, config *oauth2.Config, f func() error) error {
 	port, err := util.LoadEnvVar("PORT")
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func Listen(c context.Context, config *oauth2.Config, f func(l []string) error) 
 	return nil
 }
 
-func newRouter(f func(l []string) error) http.Handler {
+func newRouter(f func() error) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", indexHandler)

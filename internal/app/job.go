@@ -3,38 +3,88 @@ package app
 import (
 	"fmt"
 	"log"
+	"strings"
 
+	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/files"
+	"github.com/ftrbnd/film-sync/internal/google"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"golang.org/x/oauth2"
 )
 
-func runJob(links []string) error {
+func checkEmail() error {
+	emails, err := google.CheckForNewEmails()
+	if err != nil {
+		discord.SendErrorMessage(err)
+
+		hasAuthErr := strings.Contains(err.Error(), "service hasn't been initialized") || strings.Contains(err.Error(), "token expired")
+		if hasAuthErr {
+			config, _ := google.Config()
+			authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+			discord.SendAuthMessage(authURL)
+			log.Default().Println("[Google] Sent auth request to user via Discord")
+		}
+
+		return err
+	}
+	log.Default().Printf("[HTTP] Found %d new links", len(emails))
+
+	for _, email := range emails {
+		url, err := google.GetDownloadURL(email)
+		if err != nil {
+			return err
+		}
+
+		cldFolder, driveFolderID, message, err := processImages(url)
+		if err != nil {
+			discord.SendErrorMessage(err)
+			return err
+		}
+
+		newScan := database.FilmScan{
+			ID:            bson.NewObjectID(),
+			EmailID:       email.Id,
+			DownloadURL:   url,
+			CldFolderName: cldFolder,
+			DriveFolderID: driveFolderID,
+		}
+		_, err = database.AddScan(newScan)
+		if err != nil {
+			return err
+		}
+
+		err = discord.SendSuccessMessage(newScan.ID.Hex(), message)
+		if err != nil {
+			log.Default().Println(err)
+			return fmt.Errorf("failed to send discord success message: %v", err)
+		}
+
+	}
+
+	return nil
+}
+
+func processImages(weTransferURL string) (string, string, string, error) {
 	dst := "output"
 	format := "tif"
 
-	for _, link := range links {
-		z, err := files.DownloadFrom(link)
-		if err != nil {
-			return fmt.Errorf("failed to download from link: %v", err)
-		}
+	z, err := files.DownloadFrom(weTransferURL)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to download from link: %v", err)
+	}
 
-		files.Unzip(z, dst, format)
-		c, err := files.ConvertToPNG(format, dst)
-		if err != nil {
-			return fmt.Errorf("failed to convert to png: %v", err)
-		}
+	files.Unzip(z, dst, format)
+	c, err := files.ConvertToPNG(format, dst)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to convert to png: %v", err)
+	}
 
-		cldFolder, driveFolderID, message, err := files.Upload(dst, z, c)
-		if err != nil {
-			return fmt.Errorf("failed to upload files: %v", err)
-		}
-
-		err = discord.SendSuccessMessage(cldFolder, driveFolderID, message)
-		if err != nil {
-			return fmt.Errorf("failed to send discord success message: %v", err)
-		}
+	cldFolder, driveFolderID, message, err := files.Upload(dst, z, c)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to upload files: %v", err)
 	}
 
 	log.Default().Println("[Film Sync] Finished running daily job!")
-	return nil
+	return cldFolder, driveFolderID, message, nil
 }

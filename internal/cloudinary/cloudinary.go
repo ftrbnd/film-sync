@@ -9,6 +9,7 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2/api"
 	"github.com/cloudinary/cloudinary-go/v2/api/admin"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
+	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
@@ -58,11 +59,16 @@ func SetFolderName(old string, new string) error {
 		FromPath: old,
 		ToPath:   new,
 	})
-
 	if err != nil {
 		return err
 	}
 
+	err = database.UpdateCldFolderName(old, new)
+	if err != nil {
+		return err
+	}
+
+	log.Default().Printf("[Cloudinary] Set folder name to %s", new)
 	return nil
 }
 

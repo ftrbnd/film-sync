@@ -34,15 +34,20 @@ func GetScans(filterByFolderName bool) ([]FilmScan, error) {
 	return results, nil
 }
 
-func GetOneScan(folder string) (*FilmScan, error) {
-	filter := bson.M{"folder_name": folder}
+func GetOneScan(scanID string) (*FilmScan, error) {
+	objectID, err := bson.ObjectIDFromHex(scanID)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := bson.M{"_id": objectID}
 	res := scanCollection.FindOne(context.Background(), filter)
 	if res.Err() != nil {
-		return nil, fmt.Errorf(`unable to get film scan "%s": %v`, folder, res.Err())
+		return nil, fmt.Errorf(`unable to get film scan "%s": %v`, scanID, res.Err())
 	}
 
 	scan := &FilmScan{}
-	err := res.Decode(scan)
+	err = res.Decode(scan)
 	if err != nil {
 		return nil, err
 	}
@@ -60,19 +65,15 @@ func AddScan(f FilmScan) (*mongo.InsertOneResult, error) {
 	return res, nil
 }
 
-func UpdateFolderName(old string, new string) (*mongo.UpdateResult, error) {
-	filter := bson.M{"folder_name": old}
-	update := bson.D{{Key: "$set", Value: bson.D{
-		{Key: "folder_name", Value: new},
-	}}}
-
-	res, err := scanCollection.UpdateOne(context.TODO(), filter, update)
-	if err != nil {
-		return nil, err
+func UpdateCldFolderName(old string, new string) error {
+	filter := bson.M{"cld_folder_name": old}
+	update := bson.M{"$set": bson.M{"cld_folder_name": new}}
+	res := scanCollection.FindOneAndUpdate(context.Background(), filter, update)
+	if res.Err() != nil {
+		return fmt.Errorf(`unable to update film scan with cld_folder_name "%s": %v`, old, res.Err())
 	}
 
-	log.Default().Printf("[MongoDB] Updated folder name to %s", new)
-	return res, nil
+	return nil
 }
 
 func EmailExists(savedScans []FilmScan, fetchedEmail *gmail.Message) bool {

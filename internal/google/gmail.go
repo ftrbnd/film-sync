@@ -8,7 +8,6 @@ import (
 
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/util"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"google.golang.org/api/gmail/v1"
 )
 
@@ -55,7 +54,7 @@ func filterEmailsByMetadata(messages []*gmail.Message, fieldName string, fieldVa
 	return emails, nil
 }
 
-func getDownloadLink(message *gmail.Message) (string, error) {
+func GetDownloadURL(message *gmail.Message) (string, error) {
 	err := checkGmailService()
 	if err != nil {
 		return "", err
@@ -73,9 +72,9 @@ func getDownloadLink(message *gmail.Message) (string, error) {
 	}
 
 	lines := strings.Split(string(decoded), "\n")
-	link := lines[6] // or find by index of https://wetransfter.com/downloads
+	url := lines[6] // or find by index of https://wetransfter.com/downloads
 
-	return link, nil
+	return url, nil
 }
 
 func fetchEmails() ([]*gmail.Message, error) {
@@ -105,7 +104,7 @@ func fetchEmails() ([]*gmail.Message, error) {
 	return filtered, nil
 }
 
-func CheckEmail() ([]string, error) {
+func CheckForNewEmails() ([]*gmail.Message, error) {
 	log.Default().Println("[Google] Checking email...")
 
 	err := checkGmailService()
@@ -117,30 +116,22 @@ func CheckEmail() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	saved, err := database.GetScans(false)
+	scans, err := database.GetScans()
 	if err != nil {
 		return nil, err
 	}
 
-	var newLinks []string
+	var newEmails []*gmail.Message
 
 	for _, email := range emails {
-		exists := database.EmailExists(saved, email)
+		exists := database.EmailExists(scans, email)
 		if !exists {
-			link, err := getDownloadLink(email)
-			if err != nil {
-				return nil, err
-			}
-
-			newEmail := database.FilmScan{ID: bson.NewObjectID(), EmailID: email.Id, DownloadLink: link}
-
-			database.AddScan(newEmail)
-
-			newLinks = append(newLinks, link)
+			newEmails = append(newEmails, email)
 		}
 	}
 
-	return newLinks, nil
+	log.Default().Printf("[Google] Found %d new emails", len(newEmails))
+	return newEmails, nil
 }
 
 func checkGmailService() error {

@@ -6,9 +6,8 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/ftrbnd/film-sync/internal/aws"
 	"github.com/ftrbnd/film-sync/internal/database"
-	"github.com/ftrbnd/film-sync/internal/google"
+	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
@@ -27,7 +26,12 @@ func OpenSession() error {
 		return fmt.Errorf("unable to start discord session: %v", err)
 	}
 
-	bot.AddHandler(handleInteractionCreate)
+	bot.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		err := handleInteractionCreate(s, i)
+		if err != nil {
+			SendErrorMessage(err)
+		}
+	})
 	bot.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Default().Printf("[Discord] %s is ready", s.State.User)
 	})
@@ -44,26 +48,26 @@ func CloseSession() error {
 	return bot.Close()
 }
 
-func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	switch i.Type {
 	case discordgo.InteractionMessageComponent:
-		buttonID := i.MessageComponentData().CustomID
+		scanID := i.MessageComponentData().CustomID
 
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseModal,
 			Data: &discordgo.InteractionResponseData{
-				CustomID: "folder_name_modal_" + buttonID,
+				CustomID: "folder_name_modal_" + scanID,
 				Title:    "Set the folder name",
 				Components: []discordgo.MessageComponent{
 					discordgo.ActionsRow{
 						Components: []discordgo.MessageComponent{
 							discordgo.TextInput{
-								CustomID:    "folder_name_input_" + buttonID,
+								CustomID:    "folder_name_input_" + scanID,
 								Label:       "Enter the folder name",
 								Style:       discordgo.TextInputShort,
 								Placeholder: "May 2024",
 								Required:    true,
-								MaxLength:   20,
+								MaxLength:   40,
 								MinLength:   1,
 							},
 						},
@@ -72,33 +76,27 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 			},
 		})
 		if err != nil {
-			log.Default().Printf("Failed to send modal: %v", err)
+			return err
 		}
 	case discordgo.InteractionModalSubmit:
 		data := i.ModalSubmitData()
-		folderName := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
+		newFolderName := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 
-		after, _ := strings.CutPrefix(data.CustomID, "folder_name_modal_")
-		ids := strings.Split(after, ",")
-
-		_, err := database.UpdateFolderName(ids[0], folderName)
+		scanID, _ := strings.CutPrefix(data.CustomID, "folder_name_modal_")
+		scan, err := database.GetOneScan(scanID)
 		if err != nil {
-			SendErrorMessage(err)
-			return
-		}
-		err = google.SetFolderName(ids[1], folderName)
-		if err != nil {
-			SendErrorMessage(err)
-			return
-		}
-		err = aws.SetFolderName(ids[0], folderName)
-		if err != nil {
-			SendErrorMessage(err)
-			return
+			return err
 		}
 
-		s3Url, _ := aws.FolderLink(folderName)
-		driveUrl := google.FolderLink(ids[1])
+		err = files.SetFolderNames(scan.CldFolderName, scan.DriveFolderID, newFolderName)
+		if err != nil {
+			return err
+		}
+
+		cldUrl, driveUrl, err := files.FolderLinks(scan.CldFolderName, scan.DriveFolderID)
+		if err != nil {
+			return err
+		}
 
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -106,7 +104,7 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 				Embeds: []*discordgo.MessageEmbed{
 					{
 						Title:       "Folder name set!",
-						Description: folderName,
+						Description: newFolderName,
 						Color:       0x32FF25,
 						URL:         dashboardURL,
 					},
@@ -115,19 +113,18 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 					discordgo.ActionsRow{
 						Components: []discordgo.MessageComponent{
 							discordgo.Button{
+								Label: "Cloudinary",
+								Style: discordgo.LinkButton,
+								URL:   cldUrl,
+							}, discordgo.Button{
 								Label: "Drive",
 								Style: discordgo.LinkButton,
 								URL:   driveUrl,
 							},
 							discordgo.Button{
-								Label: "S3",
-								Style: discordgo.LinkButton,
-								URL:   s3Url,
-							},
-							discordgo.Button{
 								Label:    "Rename folder",
 								Style:    discordgo.PrimaryButton,
-								CustomID: fmt.Sprintf("%s,%s", folderName, ids[1]),
+								CustomID: scanID,
 								Emoji: &discordgo.ComponentEmoji{
 									Name: "📁",
 								},
@@ -138,9 +135,11 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 			},
 		})
 		if err != nil {
-			log.Default().Printf("Failed to respond to modal submission: %v", err)
+			return fmt.Errorf("failed to respond to modal submission: %v", err)
 		}
 	}
+
+	return nil
 }
 
 func createDMChannel() (*discordgo.Channel, error) {
@@ -191,17 +190,21 @@ func SendAuthMessage(authURL string) error {
 	return nil
 }
 
-func SendSuccessMessage(s3Folder string, driveFolderID string, message string) error {
+func SendSuccessMessage(scanID string, message string) error {
 	channel, err := createDMChannel()
 	if err != nil {
 		return err
 	}
 
-	s3Url, err := aws.FolderLink(s3Folder)
+	scan, err := database.GetOneScan(scanID)
 	if err != nil {
 		return err
 	}
-	driveUrl := google.FolderLink(driveFolderID)
+
+	cldUrl, driveUrl, err := files.FolderLinks(scan.CldFolderName, scan.DriveFolderID)
+	if err != nil {
+		return err
+	}
 
 	_, err = bot.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
@@ -216,19 +219,18 @@ func SendSuccessMessage(s3Folder string, driveFolderID string, message string) e
 			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
 					discordgo.Button{
+						Label: "Cloudinary",
+						Style: discordgo.LinkButton,
+						URL:   cldUrl,
+					}, discordgo.Button{
 						Label: "Google Drive",
 						Style: discordgo.LinkButton,
 						URL:   driveUrl,
 					},
 					discordgo.Button{
-						Label: "AWS S3",
-						Style: discordgo.LinkButton,
-						URL:   s3Url,
-					},
-					discordgo.Button{
 						Label:    "Set folder name",
 						Style:    discordgo.PrimaryButton,
-						CustomID: fmt.Sprintf("%s,%s", s3Folder, driveFolderID),
+						CustomID: scanID,
 						Emoji: &discordgo.ComponentEmoji{
 							Name: "📁",
 						},

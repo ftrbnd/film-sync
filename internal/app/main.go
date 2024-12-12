@@ -4,12 +4,12 @@ import (
 	"context"
 	"log"
 
-	"github.com/ftrbnd/film-sync/internal/aws"
+	"github.com/ftrbnd/film-sync/internal/cloudinary"
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/google"
-	"github.com/ftrbnd/film-sync/internal/server"
+	"github.com/ftrbnd/film-sync/internal/http"
 	"github.com/ftrbnd/film-sync/internal/util"
 	"golang.org/x/oauth2"
 )
@@ -32,7 +32,7 @@ func Bootstrap() error {
 	}
 	defer discord.CloseSession()
 
-	err = aws.StartClient()
+	err = cloudinary.SetCredentials()
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func Bootstrap() error {
 		return err
 	}
 
-	err = server.Listen(ctx, config)
+	err = http.Listen(ctx, config, checkEmail)
 	if err != nil {
 		log.Default().Printf("error starting server: %v", err)
 	}

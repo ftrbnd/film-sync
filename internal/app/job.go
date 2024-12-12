@@ -28,7 +28,6 @@ func checkEmail() error {
 
 		return err
 	}
-	log.Default().Printf("[HTTP] Found %d new links", len(emails))
 
 	for _, email := range emails {
 		url, err := google.GetDownloadURL(email)

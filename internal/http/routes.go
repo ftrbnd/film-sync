@@ -3,7 +3,6 @@ package http
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -41,29 +40,6 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 	google.StartServices(ctx, googleConfig)
 
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")
-}
-
-func scansHandler(w http.ResponseWriter, r *http.Request) {
-	log.Default().Println("[HTTP] Received /api/scans request")
-
-	scans, err := database.GetScans(true)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-	}
-
-	json.NewEncoder(w).Encode(scans)
-}
-
-func scanHandler(w http.ResponseWriter, r *http.Request) {
-	folder := r.PathValue("folder")
-	log.Default().Printf("[HTTP] Received /api/scans/{%s} api request", folder)
-
-	scan, err := database.GetOneScan(folder)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-	}
-
-	json.NewEncoder(w).Encode(&scan)
 }
 
 func dailyHandler(w http.ResponseWriter, r *http.Request, runDailyJob func() error) {

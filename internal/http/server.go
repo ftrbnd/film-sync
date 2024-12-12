@@ -43,8 +43,6 @@ func newRouter(f func() error) http.Handler {
 	mux.HandleFunc("/daily", func(w http.ResponseWriter, r *http.Request) {
 		dailyHandler(w, r, f)
 	})
-	mux.HandleFunc("/api/scans", scansHandler)
-	mux.HandleFunc("/api/scans/{folder}", scanHandler)
 
 	return mux
 }

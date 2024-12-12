@@ -12,13 +12,8 @@ import (
 	"google.golang.org/api/gmail/v1"
 )
 
-func GetScans(filterByFolderName bool) ([]FilmScan, error) {
-	filter := bson.M{}
-	if filterByFolderName {
-		filter = bson.M{"folder_name": bson.M{"$exists": true}}
-	}
-
-	cur, err := scanCollection.Find(context.Background(), filter)
+func GetScans() ([]FilmScan, error) {
+	cur, err := scanCollection.Find(context.Background(), bson.M{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to get all film scans: %v", err)
 	}

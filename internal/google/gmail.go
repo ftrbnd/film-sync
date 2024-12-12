@@ -116,7 +116,7 @@ func CheckForNewEmails() ([]*gmail.Message, error) {
 	if err != nil {
 		return nil, err
 	}
-	scans, err := database.GetScans(false)
+	scans, err := database.GetScans()
 	if err != nil {
 		return nil, err
 	}
@@ -130,6 +130,7 @@ func CheckForNewEmails() ([]*gmail.Message, error) {
 		}
 	}
 
+	log.Default().Printf("[Google] Found %d new emails", len(newEmails))
 	return newEmails, nil
 }
 

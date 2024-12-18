@@ -36,7 +36,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	database.SaveToken(tok)
+	database.SaveToken(ctx, tok)
 	google.StartServices(ctx, googleConfig)
 
 	fmt.Fprintln(w, "Thank you! You can now close this tab.")

@@ -79,13 +79,13 @@ func EmailExists(savedScans []FilmScan, fetchedEmail *gmail.Message) bool {
 	return exists
 }
 
-func SaveToken(tok *oauth2.Token) (*mongo.InsertOneResult, error) {
-	_, err := tokenCollection.DeleteMany(context.TODO(), bson.D{})
+func SaveToken(ctx context.Context, tok *oauth2.Token) (*mongo.InsertOneResult, error) {
+	_, err := tokenCollection.DeleteMany(ctx, bson.D{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to reset oauth_token collection: %v", err)
 	}
 
-	res, err := tokenCollection.InsertOne(context.TODO(), tok)
+	res, err := tokenCollection.InsertOne(ctx, tok)
 	if err != nil {
 		return nil, fmt.Errorf("unable to save token: %v", err)
 	}
@@ -94,8 +94,8 @@ func SaveToken(tok *oauth2.Token) (*mongo.InsertOneResult, error) {
 	return res, nil
 }
 
-func GetToken() (*oauth2.Token, error) {
-	res := tokenCollection.FindOne(context.TODO(), bson.D{})
+func GetToken(ctx context.Context) (*oauth2.Token, error) {
+	res := tokenCollection.FindOne(ctx, bson.D{})
 
 	tok := &oauth2.Token{}
 	err := res.Decode(tok)
@@ -104,13 +104,4 @@ func GetToken() (*oauth2.Token, error) {
 	}
 
 	return tok, nil
-}
-
-func TokenCount() (int64, error) {
-	count, err := tokenCollection.CountDocuments(context.TODO(), bson.D{})
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
 }

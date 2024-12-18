@@ -84,7 +84,7 @@ func Config() (*oauth2.Config, error) {
 
 // Retrieve a token, saves the token, then returns the generated client.
 func getClient(ctx context.Context, config *oauth2.Config) (*http.Client, error) {
-	tok, err := database.GetToken()
+	tok, err := database.GetToken(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("no oauth token in db: %v", err)
 	}

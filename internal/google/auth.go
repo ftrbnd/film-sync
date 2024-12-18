@@ -16,7 +16,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-type InstalledBody struct {
+type WebApplication struct {
 	ClientID                string   `json:"client_id"`
 	ProjectID               string   `json:"project_id"`
 	AuthURI                 string   `json:"auth_uri"`
@@ -27,7 +27,7 @@ type InstalledBody struct {
 }
 
 type Credentials struct {
-	Installed InstalledBody `json:"installed"`
+	WebClient WebApplication `json:"web"`
 }
 
 var gmailSrv *gmail.Service
@@ -48,7 +48,7 @@ func CredentialsFromEnv() ([]byte, error) {
 	}
 
 	credentials := Credentials{
-		Installed: InstalledBody{
+		WebClient: WebApplication{
 			ClientID:                clientID,
 			ProjectID:               "film-sync",
 			AuthURI:                 "https://accounts.google.com/o/oauth2/auth",

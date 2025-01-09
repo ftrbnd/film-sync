@@ -3,14 +3,13 @@ package app
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/discord"
 	"github.com/ftrbnd/film-sync/internal/files"
 	"github.com/ftrbnd/film-sync/internal/google"
-	"github.com/ftrbnd/film-sync/internal/util"
+	"github.com/ftrbnd/film-sync/internal/http"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"golang.org/x/oauth2"
 )
@@ -61,16 +60,7 @@ func checkEmail() error {
 			return fmt.Errorf("failed to send discord success message: %v", err)
 		}
 
-		buildHookURL, err := util.LoadEnvVar("NETLIFY_BUILD_HOOK_URL")
-		if err != nil {
-			return err
-		}
-
-		resp, err := http.Post(fmt.Sprintf("%s?trigger_title=%s&clear_cache=true", buildHookURL, message), "text/plain", nil)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
+		http.SendDeployRequest(message)
 	}
 
 	return nil

@@ -8,12 +8,14 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/ftrbnd/film-sync/internal/database"
 	"github.com/ftrbnd/film-sync/internal/files"
+	"github.com/ftrbnd/film-sync/internal/http"
 	"github.com/ftrbnd/film-sync/internal/util"
 )
 
 var bot *discordgo.Session
 
 var dashboardURL = "https://dashboard.heroku.com/apps/film-sync"
+var filmURL = "https://giosalad.dev/film"
 
 func OpenSession() error {
 	token, err := util.LoadEnvVar("DISCORD_TOKEN")
@@ -51,32 +53,56 @@ func CloseSession() error {
 func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	switch i.Type {
 	case discordgo.InteractionMessageComponent:
-		scanID := i.MessageComponentData().CustomID
+		customID := i.MessageComponentData().CustomID
 
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseModal,
-			Data: &discordgo.InteractionResponseData{
-				CustomID: "folder_name_modal_" + scanID,
-				Title:    "Set the folder name",
-				Components: []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.TextInput{
-								CustomID:    "folder_name_input_" + scanID,
-								Label:       "Enter the folder name",
-								Style:       discordgo.TextInputShort,
-								Placeholder: "May 2024",
-								Required:    true,
-								MaxLength:   40,
-								MinLength:   1,
+		if customID == "trigger_deploy" {
+			err := http.SendDeployRequest("Triggered by Discord button")
+			if err != nil {
+				return err
+			}
+
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Embeds: []*discordgo.MessageEmbed{
+						{
+							Title: "Triggered new deploy!",
+							Color: 0x32FF25,
+							URL:   filmURL,
+						},
+					},
+				},
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+			// else it is a scanID
+			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseModal,
+				Data: &discordgo.InteractionResponseData{
+					CustomID: "folder_name_modal_" + customID,
+					Title:    "Set the folder name",
+					Components: []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.TextInput{
+									CustomID:    "folder_name_input_" + customID,
+									Label:       "Enter the folder name",
+									Style:       discordgo.TextInputShort,
+									Placeholder: "May 2024",
+									Required:    true,
+									MaxLength:   40,
+									MinLength:   1,
+								},
 							},
 						},
 					},
 				},
-			},
-		})
-		if err != nil {
-			return err
+			})
+			if err != nil {
+				return err
+			}
 		}
 	case discordgo.InteractionModalSubmit:
 		data := i.ModalSubmitData()
@@ -93,7 +119,7 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 			return err
 		}
 
-		cldUrl, driveUrl, err := files.FolderLinks(scan.CldFolderName, scan.DriveFolderID)
+		cldURL, driveURL, err := files.FolderLinks(scan.CldFolderName, scan.DriveFolderID)
 		if err != nil {
 			return err
 		}
@@ -109,29 +135,7 @@ func handleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreat
 						URL:         dashboardURL,
 					},
 				},
-				Components: []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.Button{
-								Label: "Cloudinary",
-								Style: discordgo.LinkButton,
-								URL:   cldUrl,
-							}, discordgo.Button{
-								Label: "Drive",
-								Style: discordgo.LinkButton,
-								URL:   driveUrl,
-							},
-							discordgo.Button{
-								Label:    "Rename folder",
-								Style:    discordgo.PrimaryButton,
-								CustomID: scanID,
-								Emoji: &discordgo.ComponentEmoji{
-									Name: "📁",
-								},
-							},
-						},
-					},
-				},
+				Components: messageComponents(cldURL, driveURL, scanID),
 			},
 		})
 		if err != nil {
@@ -165,7 +169,7 @@ func SendAuthMessage(authURL string) error {
 	_, err = bot.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
 			{
-				Title:       "Authentication required!",
+				Title:       "Authentication required",
 				Description: "Visit the link to connect with Gmail and Google Drive",
 				Color:       0xFFFB25,
 				URL:         dashboardURL,
@@ -201,7 +205,7 @@ func SendSuccessMessage(scanID string, message string) error {
 		return err
 	}
 
-	cldUrl, driveUrl, err := files.FolderLinks(scan.CldFolderName, scan.DriveFolderID)
+	cldURL, driveURL, err := files.FolderLinks(scan.CldFolderName, scan.DriveFolderID)
 	if err != nil {
 		return err
 	}
@@ -215,32 +219,10 @@ func SendSuccessMessage(scanID string, message string) error {
 				URL:         dashboardURL,
 			},
 		},
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label: "Cloudinary",
-						Style: discordgo.LinkButton,
-						URL:   cldUrl,
-					}, discordgo.Button{
-						Label: "Google Drive",
-						Style: discordgo.LinkButton,
-						URL:   driveUrl,
-					},
-					discordgo.Button{
-						Label:    "Set folder name",
-						Style:    discordgo.PrimaryButton,
-						CustomID: scanID,
-						Emoji: &discordgo.ComponentEmoji{
-							Name: "📁",
-						},
-					},
-				},
-			},
-		},
+		Components: messageComponents(cldURL, driveURL, scanID),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send success message: %v", err)
 	}
 
 	return nil
@@ -269,4 +251,40 @@ func SendErrorMessage(e error) error {
 	}
 
 	return nil
+}
+
+func messageComponents(cldURL string, driveURL string, scanID string) []discordgo.MessageComponent {
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label: "Cloudinary",
+					Style: discordgo.LinkButton,
+					URL:   cldURL,
+				}, discordgo.Button{
+					Label: "Google Drive",
+					Style: discordgo.LinkButton,
+					URL:   driveURL,
+				},
+				discordgo.Button{
+					Label:    "Set folder name",
+					Style:    discordgo.PrimaryButton,
+					CustomID: scanID,
+					Emoji: &discordgo.ComponentEmoji{
+						Name: "📁",
+					},
+				},
+				discordgo.Button{
+					Label:    "Trigger deploy",
+					Style:    discordgo.SuccessButton,
+					CustomID: "trigger_deploy",
+					Emoji: &discordgo.ComponentEmoji{
+						Name: "🔄",
+					},
+				},
+			},
+		},
+	}
+
+	return components
 }

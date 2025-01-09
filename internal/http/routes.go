@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/ftrbnd/film-sync/internal/database"
@@ -115,6 +116,26 @@ func verify(body []byte, tokenString, signingKey string) error {
 	bodyHash := sha256.Sum256(body)
 	if claims["body"] != base64.URLEncoding.EncodeToString(bodyHash[:]) {
 		return fmt.Errorf("body hash does not match")
+	}
+
+	return nil
+}
+
+func SendDeployRequest(message string) error {
+	buildHookURL, err := util.LoadEnvVar("NETLIFY_BUILD_HOOK_URL")
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s?trigger_title=%s&clear_cache=true", buildHookURL, url.QueryEscape(message))
+	resp, err := http.Post(url, "application/x-www-form-urlencoded", nil)
+	if err != nil {
+		return fmt.Errorf("failed to send deploy request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("did not receive 200 OK status")
 	}
 
 	return nil

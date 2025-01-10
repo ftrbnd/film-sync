@@ -11,7 +11,6 @@ import (
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/http"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"golang.org/x/oauth2"
 )
 
 func checkEmail() error {
@@ -22,7 +21,7 @@ func checkEmail() error {
 		hasAuthErr := strings.Contains(err.Error(), "service hasn't been initialized") || strings.Contains(err.Error(), "token expired")
 		if hasAuthErr {
 			config, _ := google.Config()
-			authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+			authURL := google.AuthURL(config)
 			discord.SendAuthMessage(authURL)
 			log.Default().Println("[Google] Sent auth request to user via Discord")
 		}

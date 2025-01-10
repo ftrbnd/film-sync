@@ -132,3 +132,9 @@ func StartServices(ctx context.Context, config *oauth2.Config) error {
 
 	return nil
 }
+
+func AuthURL(config *oauth2.Config) string {
+	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+
+	return authURL
+}

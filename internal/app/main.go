@@ -11,7 +11,6 @@ import (
 	"github.com/ftrbnd/film-sync/internal/google"
 	"github.com/ftrbnd/film-sync/internal/http"
 	"github.com/ftrbnd/film-sync/internal/util"
-	"golang.org/x/oauth2"
 )
 
 func Bootstrap() error {
@@ -45,7 +44,7 @@ func Bootstrap() error {
 
 	err = google.StartServices(ctx, config)
 	if err != nil {
-		authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+		authURL := google.AuthURL(config)
 		discord.SendAuthMessage(authURL)
 		log.Default().Println("[Google] Sent auth request to user via Discord")
 	}

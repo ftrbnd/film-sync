@@ -18,7 +18,7 @@ func checkEmail() error {
 	if err != nil {
 		discord.SendErrorMessage(err)
 
-		hasAuthErr := strings.Contains(err.Error(), "service hasn't been initialized") || strings.Contains(err.Error(), "token expired")
+		hasAuthErr := strings.Contains(err.Error(), "service hasn't been initialized") || strings.Contains(err.Error(), "expired")
 		if hasAuthErr {
 			config, _ := google.Config()
 			authURL := google.AuthURL(config)

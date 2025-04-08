@@ -61,7 +61,7 @@ func findAndClickButton(page *rod.Page, jsRegex string) error {
 }
 
 func DownloadFrom(link string) (string, error) {
-	log.Default().Println("Starting download process...", link)
+	log.Default().Println("Starting download... Link:", link)
 
 	if browser == nil {
 		return "", errors.New("browser has not been started")

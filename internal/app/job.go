@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 
 	"github.com/ftrbnd/film-sync/internal/database"
@@ -68,6 +69,9 @@ func checkEmail() error {
 func processImages(weTransferURL string) (string, string, string, error) {
 	dst := "output"
 	format := "tif"
+
+	log.Default().Println("Running garbage collection...")
+	runtime.GC()
 
 	z, err := files.DownloadFrom(weTransferURL)
 	if err != nil {

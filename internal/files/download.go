@@ -85,13 +85,20 @@ func DownloadFrom(link string) (string, error) {
 	}
 
 	// sometimes the page will directly go to the Download view, so disregard the next 2 errors
-	err = findAndClickButton(page, "Accept All")
+	btnText := "Accept All"
+	err = findAndClickButton(page, btnText)
 	if err != nil {
-		log.Default().Println("'Accept All' button was not found")
+		log.Default().Printf("'%s' button was not found", btnText)
 	}
-	err = findAndClickButton(page, "I agree")
+	btnText = "I agree"
+	err = findAndClickButton(page, btnText)
 	if err != nil {
-		log.Default().Println("'I agree' button was not found")
+		log.Default().Printf("'%s' button was not found", btnText)
+	}
+	btnText = "Open"
+	err = findAndClickButton(page, btnText)
+	if err != nil {
+		log.Default().Printf("'%s' button was not found", btnText)
 	}
 
 	page.MustWaitDOMStable()
@@ -107,9 +114,10 @@ func DownloadFrom(link string) (string, error) {
 		return e.State == proto.PageDownloadProgressStateCompleted
 	})()
 
-	err = findAndClickButton(page, "Download")
+	btnText = "Download"
+	err = findAndClickButton(page, btnText)
 	if err != nil {
-		return "", fmt.Errorf("'Download' button was not found: %v", err)
+		return "", fmt.Errorf("'%s' button was not found: %v", btnText, err)
 	}
 
 	res := wait()

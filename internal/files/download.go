@@ -95,11 +95,11 @@ func DownloadFrom(link string) (string, error) {
 	if err != nil {
 		log.Default().Printf("'%s' button was not found", btnText)
 	}
-	btnText = "Open"
-	err = findAndClickButton(page, btnText)
-	if err != nil {
-		log.Default().Printf("'%s' button was not found", btnText)
-	}
+	// btnText = "Open"
+	// err = findAndClickButton(page, btnText)
+	// if err != nil {
+	// 	log.Default().Printf("'%s' button was not found", btnText)
+	// }
 
 	page.MustWaitDOMStable()
 

@@ -40,7 +40,12 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 		}
 
 		if format == ".png" {
-			err = cloudinary.UploadImage(cldFolderName, path)
+			uploadPath, cleanup, prepErr := prepareCloudinaryUpload(path)
+			if prepErr != nil {
+				return prepErr
+			}
+			err = cloudinary.UploadImage(cldFolderName, uploadPath)
+			cleanup()
 			if err != nil {
 				return err
 			}

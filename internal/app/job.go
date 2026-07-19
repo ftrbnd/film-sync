@@ -30,8 +30,8 @@ func checkEmail() error {
 		return err
 	}
 
-	for _, email := range emails {
-		url, err := google.GetDownloadURL(email)
+	for _, pending := range emails {
+		url, err := google.GetDownloadURL(pending.Message)
 		if err != nil {
 			return err
 		}
@@ -44,7 +44,9 @@ func checkEmail() error {
 
 		newScan := database.FilmScan{
 			ID:            bson.NewObjectID(),
-			EmailID:       email.Id,
+			EmailID:       pending.Message.Id,
+			Provider:      pending.Provider,
+			Studio:        pending.Studio,
 			DownloadURL:   url,
 			CldFolderName: cldFolder,
 			DriveFolderID: driveFolderID,
@@ -66,14 +68,14 @@ func checkEmail() error {
 	return nil
 }
 
-func processImages(weTransferURL string) (string, string, string, error) {
+func processImages(downloadURL string) (string, string, string, error) {
 	dst := "output"
 	format := "tif"
 
 	log.Default().Println("Running garbage collection...")
 	runtime.GC()
 
-	z, err := files.DownloadFrom(weTransferURL)
+	z, err := files.DownloadFrom(downloadURL)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to download from link: %v", err)
 	}

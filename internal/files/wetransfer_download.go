@@ -49,11 +49,8 @@ func downloadWeTransfer(link string) (string, error) {
 
 	page.MustWaitDOMStable()
 
-	done := make(chan struct{})
-	defer close(done)
-	waitDownloadHeartbeat(done)
-
-	wait := page.Browser().Timeout(45 * time.Minute).WaitDownload(wd)
+	wait, cancel := waitBrowserDownload(page.Browser().Timeout(45*time.Minute), wd)
+	defer cancel()
 
 	btnText = "Download"
 	err = findAndClickButton(page, btnText)
@@ -62,7 +59,10 @@ func downloadWeTransfer(link string) (string, error) {
 	}
 
 	log.Default().Println("[Download] click finished; waiting for Chrome to save the file...")
-	info := wait()
+	info, err := wait()
+	if err != nil {
+		return "", err
+	}
 	if info == nil {
 		return "", fmt.Errorf("download wait timed out or was cancelled before the file finished")
 	}

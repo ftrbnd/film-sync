@@ -38,21 +38,34 @@ func downloadFilemail(link string) (string, error) {
 
 	page.MustWaitDOMStable()
 
-	done := make(chan struct{})
-	defer close(done)
-	waitDownloadHeartbeat(done)
+	// Cookie / consent banners (best-effort; ignore failures).
+	for _, label := range []string{"(?i)accept all", "(?i)^accept$", "(?i)agree"} {
+		_ = findAndClickButton(page, label)
+	}
 
-	// Do not run a second page.EachEvent for download progress: it races with Browser.WaitDownload's
-	// own eachEvent and can restore Page CDP domains while WaitDownload is still listening, so wait() never completes.
-	wait := page.Browser().Timeout(45 * time.Minute).WaitDownload(wd)
+	page.MustWaitDOMStable()
 
-	err = findAndClickLinkOrButton(page, "Download all files")
-	if err != nil {
-		return "", fmt.Errorf("download control: %w", err)
+	wait, cancel := waitBrowserDownload(page.Browser().Timeout(45*time.Minute), wd)
+	defer cancel()
+
+	clicked := false
+	for _, label := range []string{"Download all files", "Download all", "(?i)download"} {
+		err = findAndClickLinkOrButton(page, label)
+		if err == nil {
+			clicked = true
+			break
+		}
+		log.Default().Printf("[Download] Filemail control %q not usable: %v", label, err)
+	}
+	if !clicked {
+		return "", fmt.Errorf("download control: could not find a Filemail download button/link")
 	}
 
 	log.Default().Println("[Download] click finished; waiting for Chrome to save the file...")
-	info := wait()
+	info, err := wait()
+	if err != nil {
+		return "", err
+	}
 	if info == nil {
 		return "", fmt.Errorf("download wait timed out or was cancelled before the file finished (wait returned nil)")
 	}

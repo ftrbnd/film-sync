@@ -21,10 +21,13 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 		return "", "", "", fmt.Errorf("failed to read directory: %v", err)
 	}
 
-	driveFolderID, cldFolderName, err := createFolders(folderName)
+	cldFolderName, driveFolderID, err := createFolders(folderName)
 	if err != nil {
 		return "", "", "", err
 	}
+
+	driveSkipped := driveFolderID == ""
+	var driveFailures int
 
 	err = filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -41,24 +44,42 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 			if err != nil {
 				return err
 			}
+			return nil
+		}
 
-		} else if format == ".tif" {
-			file, err := os.Open(path)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
+		// .tif -> Google Drive (best-effort; never abort Cloudinary uploads)
+		if driveFolderID == "" {
+			return nil
+		}
 
-			fileInfo, _ := file.Stat()
-			size := fileInfo.Size()
-			buffer := make([]byte, size) // read file content to buffer
-			file.Read(buffer)
-			fileBytes := bytes.NewReader(buffer)
+		file, err := os.Open(path)
+		if err != nil {
+			log.Default().Printf("[Google] Skipping Drive upload for %s: %v", path, err)
+			driveFailures++
+			return nil
+		}
+		defer file.Close()
 
-			err = google.Upload(fileBytes, path, driveFolderID)
-			if err != nil {
-				return err
-			}
+		fileInfo, err := file.Stat()
+		if err != nil {
+			log.Default().Printf("[Google] Skipping Drive upload for %s: %v", path, err)
+			driveFailures++
+			return nil
+		}
+		size := fileInfo.Size()
+		buffer := make([]byte, size)
+		if _, err := file.Read(buffer); err != nil {
+			log.Default().Printf("[Google] Skipping Drive upload for %s: %v", path, err)
+			driveFailures++
+			return nil
+		}
+		fileBytes := bytes.NewReader(buffer)
+
+		err = google.Upload(fileBytes, path, driveFolderID)
+		if err != nil {
+			log.Default().Printf("[Google] Drive upload failed for %s (continuing Cloudinary): %v", filepath.Base(path), err)
+			driveFailures++
+			return nil
 		}
 
 		return nil
@@ -69,6 +90,11 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 
 	cleanUp(from, zip)
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folderName, count)
+	if driveSkipped {
+		message += "\n⚠️ Google Drive folder could not be created; Cloudinary upload completed."
+	} else if driveFailures > 0 {
+		message += fmt.Sprintf("\n⚠️ Google Drive: %d file(s) failed to upload; Cloudinary upload completed.", driveFailures)
+	}
 	return cldFolderName, driveFolderID, message, nil
 }
 
@@ -78,9 +104,12 @@ func SetFolderNames(cldFolder string, driveFolderID string, new string) error {
 		return err
 	}
 
+	if driveFolderID == "" {
+		return nil
+	}
 	err = google.SetFolderName(driveFolderID, new)
 	if err != nil {
-		return err
+		log.Default().Printf("[Google] Failed to rename Drive folder (Cloudinary rename succeeded): %v", err)
 	}
 
 	return nil
@@ -91,23 +120,29 @@ func FolderLinks(cldFolder string, driveFolderID string) (string, string, error)
 	if err != nil {
 		return "", "", err
 	}
-	driveUrl := google.FolderLink(driveFolderID)
+	driveUrl := ""
+	if driveFolderID != "" {
+		driveUrl = google.FolderLink(driveFolderID)
+	}
 
 	return cldUrl, driveUrl, nil
 }
 
-func createFolders(name string) (string, string, error) {
-	driveFolderID, err := google.CreateFolder(name)
-	if err != nil {
-		return "", "", err
-	}
-
+// createFolders creates the Cloudinary folder (required) and Drive folder (best-effort).
+// A Drive failure returns an empty driveFolderID and a nil error so Cloudinary can proceed.
+func createFolders(name string) (cldFolderName string, driveFolderID string, err error) {
 	cldFolder, err := cloudinary.CreateFolder(name)
 	if err != nil {
 		return "", "", err
 	}
 
-	return driveFolderID, cldFolder.Name, nil
+	driveFolderID, err = google.CreateFolder(name)
+	if err != nil {
+		log.Default().Printf("[Google] Failed to create Drive folder %q (continuing with Cloudinary only): %v", name, err)
+		return cldFolder.Name, "", nil
+	}
+
+	return cldFolder.Name, driveFolderID, nil
 }
 
 func cleanUp(from string, zip string) {

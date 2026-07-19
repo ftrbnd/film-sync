@@ -239,8 +239,8 @@ func ResendSuccessMessage(scanID string) error {
 	if scan.LinkExpired {
 		return fmt.Errorf("scan %s is marked link_expired; refusing to send success message", scanID)
 	}
-	if scan.CldFolderName == "" || scan.DriveFolderID == "" {
-		return fmt.Errorf("scan %s is missing folder info", scanID)
+	if scan.CldFolderName == "" {
+		return fmt.Errorf("scan %s is missing Cloudinary folder info", scanID)
 	}
 
 	folder := scan.CldFolderName
@@ -344,37 +344,42 @@ func friendlyEmailJobError(provider string, sentAt time.Time, jobErr error) stri
 }
 
 func messageComponents(cldURL string, driveURL string, scanID string) []discordgo.MessageComponent {
-	components := []discordgo.MessageComponent{
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label: "Cloudinary",
-					Style: discordgo.LinkButton,
-					URL:   cldURL,
-				}, discordgo.Button{
-					Label: "Google Drive",
-					Style: discordgo.LinkButton,
-					URL:   driveURL,
-				},
-				discordgo.Button{
-					Label:    "Set folder name",
-					Style:    discordgo.PrimaryButton,
-					CustomID: scanID,
-					Emoji: &discordgo.ComponentEmoji{
-						Name: "📁",
-					},
-				},
-				discordgo.Button{
-					Label:    "Trigger deploy",
-					Style:    discordgo.SuccessButton,
-					CustomID: "trigger_deploy",
-					Emoji: &discordgo.ComponentEmoji{
-						Name: "🔄",
-					},
-				},
-			},
+	buttons := []discordgo.MessageComponent{
+		discordgo.Button{
+			Label: "Cloudinary",
+			Style: discordgo.LinkButton,
+			URL:   cldURL,
 		},
 	}
+	if driveURL != "" {
+		buttons = append(buttons, discordgo.Button{
+			Label: "Google Drive",
+			Style: discordgo.LinkButton,
+			URL:   driveURL,
+		})
+	}
+	buttons = append(buttons,
+		discordgo.Button{
+			Label:    "Set folder name",
+			Style:    discordgo.PrimaryButton,
+			CustomID: scanID,
+			Emoji: &discordgo.ComponentEmoji{
+				Name: "📁",
+			},
+		},
+		discordgo.Button{
+			Label:    "Trigger deploy",
+			Style:    discordgo.SuccessButton,
+			CustomID: "trigger_deploy",
+			Emoji: &discordgo.ComponentEmoji{
+				Name: "🔄",
+			},
+		},
+	)
 
-	return components
+	return []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: buttons,
+		},
+	}
 }

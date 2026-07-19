@@ -10,4 +10,5 @@ type FilmScan struct {
 	DownloadURL   string        `bson:"download_url,omitempty" json:"download_url,omitempty"`
 	DriveFolderID string        `bson:"drive_folder_id,omitempty" json:"drive_folder_id,omitempty"`
 	CldFolderName string        `bson:"cld_folder_name,omitempty" json:"cld_folder_name,omitempty"`
+	LinkExpired   bool          `bson:"link_expired,omitempty" json:"link_expired,omitempty"`
 }

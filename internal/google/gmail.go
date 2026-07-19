@@ -73,7 +73,8 @@ func filterEmailsByMetadata(messages []*gmail.Message, fieldName string, fieldVa
 
 		for _, header := range message.Payload.Headers {
 			if strings.EqualFold(header.Name, fieldName) && headerValuesEqual(fieldName, header.Value, fieldValue) {
-				emails = append(emails, msg)
+				// Prefer the metadata message so fields like InternalDate are populated.
+				emails = append(emails, message)
 				break
 			}
 		}

@@ -28,6 +28,7 @@ token.json
 output
 scripts/test
 *.png
+.agents
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

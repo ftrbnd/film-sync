@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/cloudinary/cloudinary-go/v2/api"
@@ -78,5 +79,6 @@ func FolderLink(name string) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("https://console.cloudinary.com/pm/%s/media-explorer/%s", id, name), nil
+	// Folder names often contain spaces (e.g. Filemail zips); Discord link buttons require a well-formed URL.
+	return fmt.Sprintf("https://console.cloudinary.com/pm/%s/media-explorer/%s", id, url.PathEscape(name)), nil
 }

@@ -69,7 +69,7 @@ func Upload(from string, zip string, count int) (string, string, string, error) 
 
 	cleanUp(from, zip)
 	message := fmt.Sprintf("Finished uploading **%s** (%d new photos)", folderName, count)
-	return folderName, driveFolderID, message, nil
+	return cldFolderName, driveFolderID, message, nil
 }
 
 func SetFolderNames(cldFolder string, driveFolderID string, new string) error {

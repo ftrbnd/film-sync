@@ -13,7 +13,7 @@ import (
 var ctx context.Context
 var googleConfig *oauth2.Config
 
-func Listen(c context.Context, config *oauth2.Config, f func() error) error {
+func Listen(c context.Context, config *oauth2.Config, dailyJob func() error, notify func(scanID, emailID string) error) error {
 	port, err := util.LoadEnvVar("PORT")
 	if err != nil {
 		return err
@@ -22,7 +22,7 @@ func Listen(c context.Context, config *oauth2.Config, f func() error) error {
 	ctx = c
 	googleConfig = config
 
-	router := newRouter(f)
+	router := newRouter(dailyJob, notify)
 
 	log.Default().Printf("[HTTP] Server listening on port %s", port)
 	log.Default().Println("[Film Sync] All services ready") // server is the last service to start since it blocks
@@ -35,13 +35,16 @@ func Listen(c context.Context, config *oauth2.Config, f func() error) error {
 	return nil
 }
 
-func newRouter(f func() error) http.Handler {
+func newRouter(dailyJob func() error, notify func(scanID, emailID string) error) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/auth", authHandler)
+	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
+		notifyHandler(w, r, notify)
+	})
 	mux.HandleFunc("/daily", func(w http.ResponseWriter, r *http.Request) {
-		dailyHandler(w, r, f)
+		dailyHandler(w, r, dailyJob)
 	})
 
 	return mux

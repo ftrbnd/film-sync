@@ -50,6 +50,26 @@ func GetOneScan(scanID string) (*FilmScan, error) {
 	return scan, nil
 }
 
+func GetScanByEmailID(emailID string) (*FilmScan, error) {
+	if emailID == "" {
+		return nil, fmt.Errorf("email id is empty")
+	}
+
+	filter := bson.M{"email_id": emailID}
+	res := scanCollection.FindOne(context.Background(), filter)
+	if res.Err() != nil {
+		return nil, fmt.Errorf(`unable to get film scan for email "%s": %v`, emailID, res.Err())
+	}
+
+	scan := &FilmScan{}
+	err := res.Decode(scan)
+	if err != nil {
+		return nil, err
+	}
+
+	return scan, nil
+}
+
 func AddScan(f FilmScan) (*mongo.InsertOneResult, error) {
 	res, err := scanCollection.InsertOne(context.TODO(), f)
 	if err != nil {

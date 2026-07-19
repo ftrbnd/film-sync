@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ftrbnd/film-sync/internal/util"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
-	"github.com/go-rod/rod/lib/proto"
 )
 
 var browser *rod.Browser
@@ -60,77 +59,53 @@ func findAndClickButton(page *rod.Page, jsRegex string) error {
 	return nil
 }
 
-func DownloadFrom(link string) (string, error) {
-	log.Default().Println("Starting download... Link:", link)
-
-	if browser == nil {
-		return "", errors.New("browser has not been started")
+// findAndClickLinkOrButton tries a <button> match first, then an <a> with the same text regex (Filemail often uses links).
+func findAndClickLinkOrButton(page *rod.Page, label string) error {
+	err := findAndClickButton(page, label)
+	if err == nil {
+		return nil
 	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get working directory: %v", err)
-	}
-
-	page := browser.MustPage()
-	err = rod.Try(func() {
+	err2 := rod.Try(func() {
 		page.MustWaitDOMStable()
-		page.Timeout(10 * time.Second).MustNavigate(link)
-		log.Default().Println("Successfully navigated to page")
+		el := page.Timeout(10*time.Second).MustElementR("a", label)
+		el.Timeout(10 * time.Second).MustClick()
 	})
-	if errors.Is(err, context.DeadlineExceeded) {
-		return "", fmt.Errorf("timed out in navigating to link: %v", err)
-	} else if err != nil {
-		return "", fmt.Errorf("failed to navigate to link: %v", err)
+	if errors.Is(err2, context.DeadlineExceeded) {
+		return fmt.Errorf("%v: no <a> matching %q either", err, label)
 	}
-
-	// sometimes the page will directly go to the Download view, so disregard the next 2 errors
-	btnText := "Accept All"
-	err = findAndClickButton(page, btnText)
-	if err != nil {
-		log.Default().Printf("'%s' button was not found", btnText)
+	if err2 != nil {
+		return fmt.Errorf("button click failed: %v; link click failed: %w", err, err2)
 	}
-	btnText = "I agree"
-	err = findAndClickButton(page, btnText)
-	if err != nil {
-		log.Default().Printf("'%s' button was not found", btnText)
-	}
-	// btnText = "Open"
-	// err = findAndClickButton(page, btnText)
-	// if err != nil {
-	// 	log.Default().Printf("'%s' button was not found", btnText)
-	// }
+	log.Default().Printf("Found and clicked <a> matching %q", label)
+	return nil
+}
 
-	page.MustWaitDOMStable()
-
-	wait := page.Browser().WaitDownload(wd)
-
-	go browser.EachEvent(func(e *proto.PageDownloadProgress) bool {
-		completed := "(unknown)"
-		if e.TotalBytes != 0 {
-			completed = fmt.Sprintf("%0.2f%%", e.ReceivedBytes/e.TotalBytes*100.0)
+// waitDownloadHeartbeat logs periodically while waiting for Rod's WaitDownload to finish.
+// Close done when the download wait completes (defer close(done) from the caller).
+func waitDownloadHeartbeat(done <-chan struct{}) {
+	go func() {
+		t := time.NewTicker(5 * time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-t.C:
+				log.Default().Println("[Download] still waiting for browser download (CDP) to finish...")
+			}
 		}
-		log.Printf("Downloading... %s\n", completed)
-		return e.State == proto.PageDownloadProgressStateCompleted
-	})()
+	}()
+}
 
-	btnText = "Download"
-	err = findAndClickButton(page, btnText)
+// DownloadFrom picks a provider-specific browser flow from the transfer URL.
+func DownloadFrom(link string) (string, error) {
+	u, err := url.Parse(link)
 	if err != nil {
-		return "", fmt.Errorf("'%s' button was not found: %v", btnText, err)
+		return "", fmt.Errorf("invalid download URL: %w", err)
 	}
-
-	res := wait()
-
-	file := filepath.Join(wd, res.GUID)
-	log.Default().Println("Saved", file)
-
-	newName := filepath.Join(wd, res.SuggestedFilename)
-	err = os.Rename(file, newName)
-	if err != nil {
-		return "", fmt.Errorf("failed to rename file: %v", err)
+	host := strings.ToLower(u.Host)
+	if strings.Contains(host, "filemail.com") && strings.HasPrefix(u.Path, "/t/") {
+		return downloadFilemail(link)
 	}
-
-	log.Default().Println("Renamed file to", newName)
-	return newName, nil
+	return downloadWeTransfer(link)
 }

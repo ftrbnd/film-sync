@@ -54,10 +54,17 @@ func Bootstrap() error {
 		return err
 	}
 
-	err = http.Listen(ctx, config, checkEmail)
+	err = http.Listen(ctx, config, checkEmail, resendSuccessNotification)
 	if err != nil {
 		log.Default().Printf("error starting server: %v", err)
 	}
 
 	return nil
+}
+
+func resendSuccessNotification(scanID, emailID string) error {
+	if scanID != "" {
+		return discord.ResendSuccessMessage(scanID)
+	}
+	return discord.ResendSuccessMessageByEmailID(emailID)
 }

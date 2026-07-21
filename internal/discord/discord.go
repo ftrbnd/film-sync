@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/ftrbnd/film-sync/internal/database"
@@ -228,6 +229,34 @@ func SendSuccessMessage(scanID string, message string) error {
 	return nil
 }
 
+// ResendSuccessMessage re-sends the Discord success DM for an existing scan
+// (e.g. after a previous send failed due to a bad button URL).
+func ResendSuccessMessage(scanID string) error {
+	scan, err := database.GetOneScan(scanID)
+	if err != nil {
+		return err
+	}
+	if scan.LinkExpired {
+		return fmt.Errorf("scan %s is marked link_expired; refusing to send success message", scanID)
+	}
+	if scan.CldFolderName == "" {
+		return fmt.Errorf("scan %s is missing Cloudinary folder info", scanID)
+	}
+
+	folder := scan.CldFolderName
+	message := fmt.Sprintf("Finished uploading **%s**", folder)
+	return SendSuccessMessage(scanID, message)
+}
+
+// ResendSuccessMessageByEmailID looks up a scan by Gmail message id, then resends.
+func ResendSuccessMessageByEmailID(emailID string) error {
+	scan, err := database.GetScanByEmailID(emailID)
+	if err != nil {
+		return err
+	}
+	return ResendSuccessMessage(scan.ID.Hex())
+}
+
 func SendErrorMessage(e error) error {
 	log.Default().Println(e)
 
@@ -239,7 +268,7 @@ func SendErrorMessage(e error) error {
 	_, err = bot.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{
 			{
-				Title:       "Film Sync failed",
+				Title:       "Error occurred",
 				Description: e.Error(),
 				Color:       0xDF0000,
 				URL:         dashboardURL,
@@ -253,38 +282,104 @@ func SendErrorMessage(e error) error {
 	return nil
 }
 
-func messageComponents(cldURL string, driveURL string, scanID string) []discordgo.MessageComponent {
-	components := []discordgo.MessageComponent{
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label: "Cloudinary",
-					Style: discordgo.LinkButton,
-					URL:   cldURL,
-				}, discordgo.Button{
-					Label: "Google Drive",
-					Style: discordgo.LinkButton,
-					URL:   driveURL,
-				},
-				discordgo.Button{
-					Label:    "Set folder name",
-					Style:    discordgo.PrimaryButton,
-					CustomID: scanID,
-					Emoji: &discordgo.ComponentEmoji{
-						Name: "📁",
-					},
-				},
-				discordgo.Button{
-					Label:    "Trigger deploy",
-					Style:    discordgo.SuccessButton,
-					CustomID: "trigger_deploy",
-					Emoji: &discordgo.ComponentEmoji{
-						Name: "🔄",
-					},
+// SendEmailJobFailure notifies about a single email that failed while others may still process.
+func SendEmailJobFailure(provider, studio string, sentAt time.Time, jobErr error) error {
+	log.Default().Printf("[Film Sync] provider=%s studio=%s sent=%s err=%v", provider, studio, sentAt, jobErr)
+
+	channel, err := createDMChannel()
+	if err != nil {
+		return err
+	}
+
+	sent := "unknown"
+	if !sentAt.IsZero() {
+		sent = sentAt.Local().Format("Jan 2, 2006 3:04 PM")
+	}
+
+	errText := friendlyEmailJobError(provider, sentAt, jobErr)
+	if len(errText) > 1024 {
+		errText = errText[:1021] + "..."
+	}
+
+	_, err = bot.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+		Embeds: []*discordgo.MessageEmbed{
+			{
+				Title: "Download failed",
+				Color: 0xDF0000,
+				URL:   dashboardURL,
+				Fields: []*discordgo.MessageEmbedField{
+					{Name: "Provider", Value: files.TransferSourceLabel(provider, studio), Inline: true},
+					{Name: "Email sent", Value: sent, Inline: true},
+					{Name: "Error", Value: errText},
 				},
 			},
 		},
+	})
+	if err != nil {
+		return err
 	}
 
-	return components
+	return nil
+}
+
+func friendlyEmailJobError(provider string, sentAt time.Time, jobErr error) string {
+	if jobErr == nil {
+		return "unknown error"
+	}
+
+	note := files.TransferExpiryMessage(provider, sentAt)
+	// Filemail expired: show only the age/expiry note.
+	if strings.Contains(strings.ToLower(provider), "filemail") && note != "" {
+		return note
+	}
+
+	msg := jobErr.Error()
+	if files.LooksLikeExpiredDownloadUI(jobErr) {
+		msg = "The download link appears to have expired."
+	}
+	if note != "" {
+		return msg + " " + note
+	}
+	return msg
+}
+
+func messageComponents(cldURL string, driveURL string, scanID string) []discordgo.MessageComponent {
+	buttons := []discordgo.MessageComponent{
+		discordgo.Button{
+			Label: "Cloudinary",
+			Style: discordgo.LinkButton,
+			URL:   cldURL,
+		},
+	}
+	if driveURL != "" {
+		buttons = append(buttons, discordgo.Button{
+			Label: "Google Drive",
+			Style: discordgo.LinkButton,
+			URL:   driveURL,
+		})
+	}
+	buttons = append(buttons,
+		discordgo.Button{
+			Label:    "Set folder name",
+			Style:    discordgo.PrimaryButton,
+			CustomID: scanID,
+			Emoji: &discordgo.ComponentEmoji{
+				Name: "📁",
+			},
+		},
+		discordgo.Button{
+			Label:    "Trigger deploy",
+			Style:    discordgo.SuccessButton,
+			CustomID: "trigger_deploy",
+			Emoji: &discordgo.ComponentEmoji{
+				Name: "🔄",
+			},
+		},
+	)
+
+	return []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: buttons,
+		},
+	}
 }

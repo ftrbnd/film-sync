@@ -3,5 +3,7 @@
 		"editor.insertSpaces": true,
 		"editor.formatOnSave": true,
 		"editor.defaultFormatter": "golang.go"
-	}
+	},
+	"git.ignoreLimitWarning": true,
+	"makefile.configureOnOpen": false
 }

@@ -84,6 +84,35 @@ func dailyHandler(w http.ResponseWriter, r *http.Request, runDailyJob func() err
 	go runDailyJob()
 }
 
+func notifyHandler(w http.ResponseWriter, r *http.Request, notify func(scanID, emailID string) error) {
+	log.Default().Println("[HTTP] Received /notify request")
+
+	env, _ := util.LoadEnvVar("GO_ENV")
+	if env != "development" {
+		http.Error(w, "notify is only available in development", http.StatusForbidden)
+		return
+	}
+
+	if notify == nil {
+		http.Error(w, "notify handler not configured", http.StatusInternalServerError)
+		return
+	}
+
+	scanID := r.URL.Query().Get("scan_id")
+	emailID := r.URL.Query().Get("email_id")
+	if scanID == "" && emailID == "" {
+		http.Error(w, "provide scan_id or email_id query param", http.StatusBadRequest)
+		return
+	}
+
+	if err := notify(scanID, emailID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintln(w, "Success notification resent")
+}
+
 func verify(body []byte, tokenString, signingKey string) error {
 	token, err := jwt.Parse(
 		tokenString,

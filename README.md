@@ -128,6 +128,10 @@ Create a `.env` file at the root and fill out the values:
   CLOUDINARY_URL=""
   CLOUDINARY_ID=""
 
+  # Post-upload orientation check on gio-hub (POST /film/orient)
+  GIO_HUB_URL=""          # e.g. http://localhost:3000 or https://gio-hub.onrender.com
+  GIO_HUB_API_SECRET=""   # same value as gio-hub's API_SECRET
+
   QSTASH_CURRENT_SIGNING_KEY=""
   QSTASH_NEXT_SIGNING_KEY=""
 

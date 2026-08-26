@@ -106,6 +106,10 @@ func processPendingEmail(pending google.PendingDownload) error {
 	}
 
 	http.SendDeployRequest(message)
+
+	if err := http.NotifyFilmOrient(cldFolder); err != nil {
+		log.Default().Printf("[Film Sync] Upload succeeded for folder %q but gio-hub orient ping failed: %v", cldFolder, err)
+	}
 	return nil
 }
 

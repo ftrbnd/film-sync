@@ -1,13 +1,16 @@
 package http
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ftrbnd/film-sync/internal/database"
@@ -167,5 +170,47 @@ func SendDeployRequest(message string) error {
 		return fmt.Errorf("did not receive 200 OK status")
 	}
 
+	return nil
+}
+
+// NotifyFilmOrient asks gio-hub to inspect a Cloudinary folder for sideways
+// portrait frames and rotate them. Expects 202 Accepted; processing continues
+// asynchronously on gio-hub.
+func NotifyFilmOrient(folder string) error {
+	baseURL, err := util.LoadEnvVar("GIO_HUB_URL")
+	if err != nil {
+		return err
+	}
+	secret, err := util.LoadEnvVar("GIO_HUB_API_SECRET")
+	if err != nil {
+		return err
+	}
+
+	endpoint := strings.TrimRight(baseURL, "/") + "/film/orient"
+	body, err := json.Marshal(map[string]string{"folder": folder})
+	if err != nil {
+		return fmt.Errorf("failed to marshal film orient payload: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to build film orient request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+secret)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 90 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to ping gio-hub film orient: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return fmt.Errorf("gio-hub film orient returned %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+
+	log.Default().Printf("[HTTP] Notified gio-hub to orient folder %q", folder)
 	return nil
 }
